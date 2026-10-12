@@ -1,3 +1,5 @@
 target/
 dist/
 source.wasm
+node_modules/
+coverage/

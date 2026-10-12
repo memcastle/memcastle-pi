@@ -1,0 +1,10 @@
+[tools]
+bun = "1.4.2"
+
+[tasks.test]
+description = "Validate only Pi's source and integration modules"
+run = "python3 scripts/check_modules.py"
+
+[tasks.package]
+description = "Build the standalone Pi release archive and reviewed artifact digests"
+run = "python3 scripts/package.py"

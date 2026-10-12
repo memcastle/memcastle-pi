@@ -1,0 +1,46 @@
+# The Pi integration as `memcastle integration install pi` sees it.
+# The standalone plugin packager builds dist/ before producing the archive.
+format = 1
+
+[integration]
+id = "pi"
+version = "0.1.0"
+description = "Wake-up, recall, checkpoint and mining lifecycle for the Pi coding agent, over MCP and HTTP"
+
+[compatibility]
+# The MemCastle contract the client half speaks (docs/integration-contract.md) arrived with 0.2.
+memcastle = ">=0.4, <0.6"
+# Pi 1.0 is the minimum: the extension is built on its 1.x extension API and bundles the MCP client library Pi 1.0
+# publishes (`@earendil-works/pi-mcp`); earlier versions are not supported.
+agent = ">=1.0"
+
+[agent]
+kind = "pi"
+# Pi finds this through the `package.json` the build writes beside it.
+entry = "extension.js"
+
+# The bundle, its `package.json` and nothing else: no `node_modules`, no sources.
+[[assets]]
+from = "dist"
+to = "."
+
+# The plugin carries the skills locally so it can be installed without a Core assets bundle.
+[[skills]]
+name = "memcastle-setup"
+local = true
+
+[[skills]]
+name = "search-before-answer"
+local = true
+
+[[skills]]
+name = "checkpoint-instructions"
+local = true
+
+[[skills]]
+name = "wake-up"
+local = true
+
+[[skills]]
+name = "diary"
+local = true

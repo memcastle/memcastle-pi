@@ -18,6 +18,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasip2
+      - uses: oven-sh/setup-bun@v2
       - name: Verify the tag names a reviewed release on main
         env:
           GH_TOKEN: ${{ github.token }}
@@ -31,8 +32,6 @@ jobs:
           fi
       - name: Build and package this provider only
         run: python3 scripts/package.py
-      - name: Format, lint and test this provider's modules
-        run: python3 scripts/check_modules.py
       - name: Refuse artifacts with unreviewed manifest changes
         run: |
           git diff --exit-code -- plugin.toml || {
@@ -56,11 +55,14 @@ jobs:
           binary=("$RUNNER_TEMP"/memcastle_*_linux-amd64)
           test -f "${binary[0]}" || { echo "::error::released Core binary is missing"; exit 1; }
           chmod +x "${binary[0]}"
+          echo "MEMCASTLE_BIN=${binary[0]}" >> "$GITHUB_ENV"
           for manifest in modules/*/memcastle-source.toml; do
             if [[ -f "$manifest" ]]; then
               "${binary[0]}" source test "$(dirname "$manifest")" --no-build
             fi
           done
+      - name: Format, lint and test this provider's modules
+        run: python3 scripts/check_modules.py
       - name: Validate plugin metadata
         run: python3 -m unittest discover -s tests
       - name: Exercise archive installation when released Core supports plugins
@@ -68,6 +70,7 @@ jobs:
           binary=("$RUNNER_TEMP"/memcastle_*_linux-amd64)
           if "${binary[0]}" plugin --help >/dev/null 2>&1; then
             MEMCASTLE_BIN="${binary[0]}" python3 scripts/smoke_install.py
+            MEMCASTLE_BIN="${binary[0]}" python3 scripts/smoke_adoption.py
           else
             echo 'Latest released Core predates plugin installation; current-Core contract CI validates this workflow.'
           fi

@@ -95,7 +95,8 @@ def main() -> None:
                 f"--remap-path-prefix={module_dir}=/module",
             ))
             subprocess.run(["cargo", "build", "--locked", "--release", "--target", "wasm32-wasip2"], cwd=module_dir, env=build_env, check=True)
-            built = module_dir / "target/wasm32-wasip2/release" / f"{name.replace('-', '_')}.wasm"
+            # The migrated crate keeps its original artifact name for reproducible source builds.
+            built = module_dir / "target/wasm32-wasip2/release" / "memcastle_source_pi.wasm"
             if not built.is_file():
                 raise ValueError(f"source {name!r} built no component at {built}")
             shutil.copyfile(built, safe_parent(module["entry"]))
@@ -113,7 +114,14 @@ def main() -> None:
                 integration = tomllib.load(source)
             prefix = f"modules/{name}"
             for asset in integration.get("assets", []):
-                directory(files, f"{prefix}/{asset['from']}")
+                if asset["from"] == "dist":
+                    # The source's conformance component and legacy adoption archive also live under dist/.
+                    # Only these two runtime files are Pi integration assets; packaging the directory would
+                    # accidentally ship stale source packages or make the plugin hash depend on smoke tests.
+                    for entry in ("extension.js", "package.json"):
+                        add(files, f"{prefix}/dist/{entry}")
+                else:
+                    directory(files, f"{prefix}/{asset['from']}")
             for skill in integration.get("skills", []):
                 directory(files, (prefix + "/" if skill.get("local", False) else "") + f"skills/{skill['name']}")
         else:

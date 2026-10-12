@@ -13,9 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 class PluginManifestTests(unittest.TestCase):
     def test_module_ids_are_unique_and_stable(self):
         plugin = tomllib.loads((ROOT / "plugin.toml").read_text())
-        names = [module["id"] for module in plugin.get("modules", [])]
+        names = [(module["type"], module["id"]) for module in plugin.get("modules", [])]
         self.assertEqual(len(names), len(set(names)))
-        self.assertTrue(plugin["plugin"]["id"])
+        self.assertEqual(plugin["plugin"]["id"], "pi")
+        self.assertEqual(set(names), {("source", "pi"), ("integration", "pi")})
 
     def test_declared_module_manifests_exist(self):
         plugin = tomllib.loads((ROOT / "plugin.toml").read_text())
@@ -29,6 +30,27 @@ class PluginManifestTests(unittest.TestCase):
             self.assertEqual(child["compatibility"]["memcastle"], plugin["memcastle"])
             if module["type"] == "source":
                 self.assertEqual(child["compatibility"]["contract"], module["contract"])
+
+    def test_integration_assets_do_not_include_the_sources_conformance_or_legacy_outputs(self):
+        spec = spec_from_file_location("provider_package", ROOT / "scripts/package.py")
+        packager = module_from_spec(spec)
+        spec.loader.exec_module(packager)
+        # Packaging must remain independent of whichever source tests ran before it.
+        source = ROOT / "modules/pi/dist/source.wasm"
+        legacy = ROOT / "modules/pi/dist/unreviewed-legacy.tar.gz"
+        self.assertTrue(source.is_file())
+        legacy.write_bytes(b"a package produced by a previous local source test")
+        try:
+            packager.main()
+            import tarfile
+            with tarfile.open(ROOT / "dist/pi-0.1.0.tar.gz", "r:gz") as archive:
+                names = archive.getnames()
+        finally:
+            legacy.unlink()
+        self.assertIn("modules/pi/dist/extension.js", names)
+        self.assertIn("modules/pi/dist/package.json", names)
+        self.assertNotIn("modules/pi/dist/source.wasm", names)
+        self.assertNotIn("modules/pi/dist/unreviewed-legacy.tar.gz", names)
 
     def test_packaging_never_follows_a_source_component_symlink(self):
         spec = spec_from_file_location("provider_package", ROOT / "scripts/package.py")
