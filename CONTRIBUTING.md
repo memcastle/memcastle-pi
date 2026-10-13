@@ -24,6 +24,7 @@ The archive is `dist/pi-<plugin.version>.tar.gz`; `scripts/package.py` updates i
 Commit `plugin.toml`, the source's `Cargo.lock`, the Bun lockfile and the change together.
 Pi's own packaging job checks those hashes, locks, format, lint, native and integration tests;
 Core's shared validation checks source conformance, installation and activation on every selected Core version.
+CI runs once per pull request and on every push to `main`, including merges.
 The matrix always tests `main` and records its exact SHA; add only plugin-capable stable versions to `core-versions`.
 Pi's adoption smoke also runs on every leg.
 
