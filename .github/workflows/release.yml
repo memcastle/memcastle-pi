@@ -10,71 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-wasip2
-      - uses: oven-sh/setup-bun@v2
-      - name: Verify the tag names a reviewed release on main
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          version=$(python3 -c 'import tomllib; print(tomllib.load(open("plugin.toml", "rb"))["plugin"]["version"])')
-          test "$GITHUB_REF_NAME" = "pi/v$version" || { echo "::error::tag does not match plugin.toml"; exit 1; }
-          git merge-base --is-ancestor HEAD origin/main || { echo "::error::tag must point to a commit on main"; exit 1; }
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "::error::release already exists; bump the version before publishing new bytes"
-            exit 1
-          fi
-      - name: Build and package this provider only
-        run: python3 scripts/package.py
-      - name: Refuse artifacts with unreviewed manifest changes
-        run: |
-          git diff --exit-code -- plugin.toml || {
-            echo "::error::commit the plugin.toml artifact digests before publishing"
-            exit 1
-          }
-      - name: Require reviewed source dependency locks
-        run: |
-          for manifest in modules/*/memcastle-source.toml; do
-            if [[ -f "$manifest" ]]; then
-              lock="$(dirname "$manifest")/Cargo.lock"
-              git ls-files --error-unmatch "$lock" >/dev/null || { echo "::error::commit $lock"; exit 1; }
-            fi
-          done
-      - name: Exercise each source against released Core
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          core_tag="$(gh release list --repo memcastle/memcastle --limit 1000 --json tagName,isDraft,isPrerelease | python3 scripts/latest_core_release.py)"
-          gh release download "$core_tag" --repo memcastle/memcastle --pattern 'memcastle_*_linux-amd64' --dir "$RUNNER_TEMP"
-          binary=("$RUNNER_TEMP"/memcastle_*_linux-amd64)
-          test -f "${binary[0]}" || { echo "::error::released Core binary is missing"; exit 1; }
-          chmod +x "${binary[0]}"
-          echo "MEMCASTLE_BIN=${binary[0]}" >> "$GITHUB_ENV"
-          for manifest in modules/*/memcastle-source.toml; do
-            if [[ -f "$manifest" ]]; then
-              "${binary[0]}" source test "$(dirname "$manifest")" --no-build
-            fi
-          done
-      - name: Format, lint and test this provider's modules
-        run: python3 scripts/check_modules.py
-      - name: Validate plugin metadata
-        run: python3 -m unittest discover -s tests
-      - name: Exercise archive installation when released Core supports plugins
-        run: |
-          binary=("$RUNNER_TEMP"/memcastle_*_linux-amd64)
-          if "${binary[0]}" plugin --help >/dev/null 2>&1; then
-            MEMCASTLE_BIN="${binary[0]}" python3 scripts/smoke_install.py
-            MEMCASTLE_BIN="${binary[0]}" python3 scripts/smoke_adoption.py
-          else
-            echo 'Latest released Core predates plugin installation; current-Core contract CI validates this workflow.'
-          fi
-      - name: Publish this provider's release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "dist/pi-$(python3 -c 'import tomllib; print(tomllib.load(open("plugin.toml", "rb"))["plugin"]["version"])').tar.gz" --generate-notes
+    uses: memcastle/memcastle/.github/workflows/standalone-plugin-release.yaml@2d36e3521a2fe010ec27a9af72affc0447e3ab53
+    with:
+      core-versions: '[]'
+      extra-smoke-command: python3 scripts/smoke_adoption.py
