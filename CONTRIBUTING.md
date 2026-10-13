@@ -7,7 +7,8 @@ Keep the source and integration IDs `pi`, and preserve source option identity (`
 `since` only narrows a run).
 Do not change the source contract, filesystem grants or Core version range without reviewing their compatibility.
 
-Run these checks with `MEMCASTLE_BIN` pointing to a released or locally built Core binary:
+Run these checks with `MEMCASTLE_BIN` pointing to a plugin-capable Core binary (the permanent `main` prerelease or a
+locally built Core):
 
 ```sh
 mise run package
@@ -21,8 +22,11 @@ python3 scripts/smoke_adoption.py
 The archive is `dist/pi-<plugin.version>.tar.gz`; `scripts/package.py` updates its two reviewed module hashes in
 `plugin.toml`.
 Commit `plugin.toml`, the source's `Cargo.lock`, the Bun lockfile and the change together.
-The plugin CI checks those hashes, locks, format, lint, native and integration tests, and conformance with released Core.
-Until a plugin-capable Core is released, run both smoke scripts against a current Core checkout via `MEMCASTLE_BIN`.
+Pi's own packaging job checks those hashes, locks, format, lint, native and integration tests;
+Core's shared validation checks source conformance, installation and activation on every selected Core version.
+CI runs once per pull request and on every push to `main`, including merges.
+The matrix always tests `main` and records its exact SHA; add only plugin-capable stable versions to `core-versions`.
+Pi's adoption smoke also runs on every leg.
 
 For an independent release, advance `plugin.version` and whichever module versions changed, repackage and review the
 archive and compatibility, then follow the repository's `pi/v<version>` release workflow on a reviewed `main` commit.

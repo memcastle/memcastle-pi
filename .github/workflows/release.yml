@@ -1,4 +1,4 @@
-name: Publish pi
+name: 📦 Publish Pi
 
 on:
   push:
@@ -6,75 +6,44 @@ on:
       - 'pi/v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  validate:
+    name: 🧪 Validate Pi
+    uses: ./.github/workflows/plugin.yml
+
+  publish:
+    name: 🚀 Publish Pi
+    needs: validate
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-wasip2
-      - uses: oven-sh/setup-bun@v2
-      - name: Verify the tag names a reviewed release on main
+          persist-credentials: false
+      - name: Require a reviewed version tag on main
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          version=$(python3 -c 'import tomllib; print(tomllib.load(open("plugin.toml", "rb"))["plugin"]["version"])')
-          test "$GITHUB_REF_NAME" = "pi/v$version" || { echo "::error::tag does not match plugin.toml"; exit 1; }
-          git merge-base --is-ancestor HEAD origin/main || { echo "::error::tag must point to a commit on main"; exit 1; }
+          set -euo pipefail
+          expected="$(python3 -c 'import tomllib; p=tomllib.load(open("plugin.toml", "rb"))["plugin"]; print("{}/v{}".format(p["id"], p["version"]))')"
+          test "$GITHUB_REF_NAME" = "$expected" || { echo '::error::tag does not match plugin.toml'; exit 1; }
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main || { echo '::error::tag must be on main'; exit 1; }
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            echo "::error::release already exists; bump the version before publishing new bytes"
+            echo '::error::release already exists; bump plugin.version before publishing'
             exit 1
           fi
-      - name: Build and package this provider only
-        run: python3 scripts/package.py
-      - name: Refuse artifacts with unreviewed manifest changes
-        run: |
-          git diff --exit-code -- plugin.toml || {
-            echo "::error::commit the plugin.toml artifact digests before publishing"
-            exit 1
-          }
-      - name: Require reviewed source dependency locks
-        run: |
-          for manifest in modules/*/memcastle-source.toml; do
-            if [[ -f "$manifest" ]]; then
-              lock="$(dirname "$manifest")/Cargo.lock"
-              git ls-files --error-unmatch "$lock" >/dev/null || { echo "::error::commit $lock"; exit 1; }
-            fi
-          done
-      - name: Exercise each source against released Core
+      - uses: actions/download-artifact@v8
+        with:
+          name: plugin-package
+      - name: Publish Pi's validated archive
         env:
           GH_TOKEN: ${{ github.token }}
+          ARCHIVE: ${{ needs.validate.outputs.archive }}
         run: |
-          core_tag="$(gh release list --repo memcastle/memcastle --limit 1000 --json tagName,isDraft,isPrerelease | python3 scripts/latest_core_release.py)"
-          gh release download "$core_tag" --repo memcastle/memcastle --pattern 'memcastle_*_linux-amd64' --dir "$RUNNER_TEMP"
-          binary=("$RUNNER_TEMP"/memcastle_*_linux-amd64)
-          test -f "${binary[0]}" || { echo "::error::released Core binary is missing"; exit 1; }
-          chmod +x "${binary[0]}"
-          echo "MEMCASTLE_BIN=${binary[0]}" >> "$GITHUB_ENV"
-          for manifest in modules/*/memcastle-source.toml; do
-            if [[ -f "$manifest" ]]; then
-              "${binary[0]}" source test "$(dirname "$manifest")" --no-build
-            fi
-          done
-      - name: Format, lint and test this provider's modules
-        run: python3 scripts/check_modules.py
-      - name: Validate plugin metadata
-        run: python3 -m unittest discover -s tests
-      - name: Exercise archive installation when released Core supports plugins
-        run: |
-          binary=("$RUNNER_TEMP"/memcastle_*_linux-amd64)
-          if "${binary[0]}" plugin --help >/dev/null 2>&1; then
-            MEMCASTLE_BIN="${binary[0]}" python3 scripts/smoke_install.py
-            MEMCASTLE_BIN="${binary[0]}" python3 scripts/smoke_adoption.py
-          else
-            echo 'Latest released Core predates plugin installation; current-Core contract CI validates this workflow.'
-          fi
-      - name: Publish this provider's release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "dist/pi-$(python3 -c 'import tomllib; print(tomllib.load(open("plugin.toml", "rb"))["plugin"]["version"])').tar.gz" --generate-notes
+          test -s "$ARCHIVE"
+          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" --generate-notes
