@@ -22,8 +22,8 @@ python3 scripts/smoke_adoption.py
 The archive is `dist/pi-<plugin.version>.tar.gz`; `scripts/package.py` updates its two reviewed module hashes in
 `plugin.toml`.
 Commit `plugin.toml`, the source's `Cargo.lock`, the Bun lockfile and the change together.
-The shared Core workflows check those hashes, locks, format, lint, native and integration tests, plus source
-conformance, installation and activation on every explicitly selected Core version.
+Pi's own packaging job checks those hashes, locks, format, lint, native and integration tests;
+Core's shared validation checks source conformance, installation and activation on every selected Core version.
 The matrix always tests `main` and records its exact SHA; add only plugin-capable stable versions to `core-versions`.
 Pi's adoption smoke also runs on every leg.
 
