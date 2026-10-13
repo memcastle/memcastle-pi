@@ -1,4 +1,4 @@
-name: Plugin validation
+name: 🧩 Pi plugin
 
 on:
   pull_request:
@@ -29,6 +29,7 @@ permissions:
 
 jobs:
   package:
+    name: 🏗️ Build Pi
     runs-on: ubuntu-latest
     outputs:
       archive: ${{ steps.archive.outputs.path }}
@@ -75,8 +76,9 @@ jobs:
           if-no-files-found: error
 
   validate:
+    name: 🧪 Check with Core
     needs: package
-    uses: memcastle/memcastle/.github/workflows/plugin-validation.yaml@16fbab3d5cea6e4e9dd095d37a209540d5c77d14
+    uses: memcastle/memcastle/.github/workflows/plugin-validation.yaml@219e7a20f14242dc5b02eaf42be60b5ea6cea9ff
     with:
       artifact-name: plugin-package
       archive-path: ${{ needs.package.outputs.archive }}

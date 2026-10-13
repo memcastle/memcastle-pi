@@ -1,4 +1,4 @@
-name: Publish pi
+name: 📦 Publish Pi
 
 on:
   push:
@@ -10,9 +10,11 @@ permissions:
 
 jobs:
   validate:
+    name: 🧪 Validate Pi
     uses: ./.github/workflows/plugin.yml
 
   publish:
+    name: 🚀 Publish Pi
     needs: validate
     runs-on: ubuntu-latest
     permissions:
