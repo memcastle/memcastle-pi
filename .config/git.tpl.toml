@@ -5,8 +5,10 @@
 
 [template]
 source = "https://github.com/memcastle/memcastle-plugin.tpl"
+ref = "ci/codecov"
 
 [answers]
+codecov = true
 description = "Pi coding-agent history and lifecycle integration"
 github_owner = "memcastle"
 integration_template = "https://github.com/memcastle/memcastle-integration.tpl"

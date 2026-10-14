@@ -1,5 +1,8 @@
 # memcastle-pi
 
+Coverage CI measures native Rust source tests and Bun integration tests, then uploads LCOV to Codecov with
+GitHub OIDC. Enable this repository in Codecov for PR coverage status.
+
 Pi coding-agent history and lifecycle integration.
 
 This provider plugin owns the versioned package, while each module has its own lifecycle.
