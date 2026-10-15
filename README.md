@@ -1,5 +1,11 @@
 # memcastle-pi
 
+Release delivery uses gh-ship: releasable Conventional Commits open a `release/next` PR on pushes to `main`.
+Review and merge that PR to publish a validated `pi/vVERSION` archive. Configure the `release` environment
+with `APP_CLIENT_ID` (variable) and `APP_PRIVATE_KEY` (secret) for a GitHub App installed on this repository with
+contents, actions and pull requests write permissions (issues write for creating labels). Set squash title to PR title
+and squash message to blank. `prepare-release` accepts `dry_run` without pushing.
+
 Pi coding-agent history and lifecycle integration.
 
 This provider plugin owns the versioned package, while each module has its own lifecycle.
@@ -31,8 +37,8 @@ permanent `main` prerelease, recording the exact Core SHA in the job summary.
 `core-versions` can add exact plugin-capable stable versions to the same full validation matrix;
 Core 0.4.1 is not eligible because it predates plugin installation.
 Pi's adoption smoke runs on every matrix leg, and Core CI separately checks the generated plugin contract.
-Pi's own release workflow accepts only a `pi/v<plugin.toml version>` tag on `main`, then rebuilds the exact
-reviewed artifact, runs the compatibility matrix, and refuses an existing release.
+Pi's publish workflow accepts only a `pi/v<plugin.toml version>` tag on `main`, then rebuilds the exact
+reviewed artifact and runs the compatibility matrix before uploading to a draft release.
 The parent scaffold uses `memcastle-plugin.tpl` with the Pi source composed at the pinned child revision recorded in
 `.config/git.tpl.toml`. GitTPL 0.14 rejects the same `pi` identifier in both composition lists, so the integration is
 overlaid in `modules/pi/` from `memcastle-integration.tpl` at the parent template's pinned revision
