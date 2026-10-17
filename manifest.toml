@@ -14,9 +14,16 @@ license = "MIT"
 id = "pi"
 type = "source"
 version = "0.1.0"
-manifest = "modules/pi/memcastle-source.toml"
-entry = "modules/pi/source.wasm"
+manifest = "sources/pi/memcastle-source.toml"
+entry = "sources/pi/source.wasm"
 contract = "0.4.0"
 
+
+[[modules]]
+id = "pi"
+type = "integration"
+version = "0.1.0"
+manifest = "integrations/pi/memcastle-integration.toml"
+entry = "integrations/pi/dist/index.js"
 
 [checksums]
