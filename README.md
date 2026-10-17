@@ -10,15 +10,17 @@ Installing the plugin makes its modules available; enable sources and install in
 
 ```sh
 mise install
-python3 scripts/package.py
-python3 scripts/check_modules.py
-python3 -m unittest discover -s tests
+memcastle plugin inspect plugin.toml --json
+# Build modules/pi for wasm32-wasip2 and run bun run build in modules/pi first.
+memcastle plugin package plugin.toml
+memcastle plugin test dist/pi-0.1.0.tar.gz
 MEMCASTLE_BIN=/path/to/memcastle python3 scripts/smoke_install.py
 MEMCASTLE_BIN=/path/to/memcastle python3 scripts/smoke_adoption.py
 ```
 
 The archive in `dist/` is independently releasable from MemCastle Core.
-The root `plugin.toml` declares stable typed module identities; the package script fills artifact hashes after building.
+The root `plugin.toml` is an immutable descriptor of typed modules; Core generates the reviewable `manifest.toml`
+with release versions and artifact checksums. Commit the regenerated manifest before release.
 Commit each source module's generated `Cargo.lock` before publishing a release.
 The source module carries the versioned public WIT contract and its own fixtures; the agent integration uses MCP/HTTP.
 No module needs a private Core checkout or a sibling provider to build or test.
@@ -31,8 +33,10 @@ permanent `main` prerelease, recording the exact Core SHA in the job summary.
 `core-versions` can add exact plugin-capable stable versions to the same full validation matrix;
 Core 0.4.1 is not eligible because it predates plugin installation.
 Pi's adoption smoke runs on every matrix leg, and Core CI separately checks the generated plugin contract.
-Pi's own release workflow accepts only a `pi/v<plugin.toml version>` tag on `main`, then rebuilds the exact
-reviewed artifact, runs the compatibility matrix, and refuses an existing release.
+Pi's release workflow validates the reviewed `pi/v<manifest.toml version>` tag on `main`, then rebuilds and checks
+the artifact before attaching it to gh-ship's draft release. gh-ship and git-cliff open a reviewed `release/next`
+PR for releasable commits. Configure `APP_CLIENT_ID` and `APP_PRIVATE_KEY` in the `release` environment for an
+installed GitHub App. Native Cargo/Bun coverage and test results upload to Codecov.
 The parent scaffold uses `memcastle-plugin.tpl` with the Pi source composed at the pinned child revision recorded in
 `.config/git.tpl.toml`. GitTPL 0.14 rejects the same `pi` identifier in both composition lists, so the integration is
 overlaid in `modules/pi/` from `memcastle-integration.tpl` at the parent template's pinned revision

@@ -3,7 +3,6 @@ memcastle = ">=0.4, <0.6"
 
 [plugin]
 id = "pi"
-version = "0.1.0"
 provider = "pi"
 description = "Pi coding-agent history and lifecycle integration"
 repository = "https://github.com/memcastle/memcastle-pi"
@@ -14,18 +13,12 @@ license = "MIT"
 [[modules]]
 id = "pi"
 type = "source"
-version = "0.1.0"
 manifest = "modules/pi/memcastle-source.toml"
-manifest_sha256 = "dd811de9074a9fff9316b16c3221b269d03895d146218f17284d6318c236c957"
 entry = "modules/pi/source.wasm"
-sha256 = "b7c38672af072f0e3174fb27a2a9fe13887c71db37e51e38fd41e7db343f50cf"
 contract = "0.4.0"
 
 [[modules]]
 id = "pi"
 type = "integration"
-version = "0.1.0"
 manifest = "modules/pi/memcastle-integration.toml"
-manifest_sha256 = "76b8a8a46198c7f48d339d30e341ca2569e75d142a82f1415c2e27ef17e5084f"
 entry = "modules/pi/dist/extension.js"
-sha256 = "26942c11e569af93b82f448cdead3d5d10b9267a7587be6136b8e9145271e88b"
