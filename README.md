@@ -7,11 +7,13 @@ The `pi` source reads Pi's JSONL session history; the `pi` integration provides 
 They intentionally share an ID but remain separately activated, configured and versioned.
 See [source behavior](docs/source.md) and [integration behavior and configuration](docs/integration.md).
 Installing the plugin makes its modules available; enable sources and install integrations separately.
+Sources live in `sources/<id>/` and integrations in `integrations/<id>/`; typed modules may share an ID without
+sharing their implementation files or activation state.
 
 ```sh
 mise install
 memcastle plugin inspect plugin.toml --json
-# Build modules/pi for wasm32-wasip2 and run bun run build in modules/pi first.
+# Build sources/pi for wasm32-wasip2 and run bun run build in integrations/pi first.
 memcastle plugin package plugin.toml
 memcastle plugin test dist/pi-0.1.0.tar.gz
 MEMCASTLE_BIN=/path/to/memcastle node scripts/smoke_adoption.mjs
@@ -36,11 +38,9 @@ Pi's release workflow validates the reviewed `pi/v<manifest.toml version>` tag o
 the artifact before attaching it to gh-ship's draft release. gh-ship and git-cliff open a reviewed `release/next`
 PR for releasable commits. Configure `APP_CLIENT_ID` and `APP_PRIVATE_KEY` in the `release` environment for an
 installed GitHub App. Native Cargo/Bun coverage and test results upload to Codecov.
-The parent scaffold uses `memcastle-plugin.tpl` with the Pi source composed at the pinned child revision recorded in
-`.config/git.tpl.toml`. GitTPL 0.14 rejects the same `pi` identifier in both composition lists, so the integration is
-overlaid in `modules/pi/` from `memcastle-integration.tpl` at the parent template's pinned revision
-`04cc8455f056485cb08298a4a0af82909d314fe9`; retain both typed module entries when updating the parent template.
-The actual Pi implementation and manifest were migrated from Core over that scaffold.
+The parent `memcastle-plugin.tpl` scaffold composes the Pi source in `sources/pi/` and the Pi integration in
+`integrations/pi/` from the child revisions recorded in `.config/git.tpl.toml`. Their common `pi` ID does not share
+an implementation or activation state. The Pi source and integration implementations were migrated from Core.
 Neither module requires a sibling Core checkout, and `MEMCASTLE_BIN` selects a released or local Core.
 
 To migrate a palace already mined by the bundled `pi` source, install this archive with the preview's exact consent

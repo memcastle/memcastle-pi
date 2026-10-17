@@ -1,8 +1,8 @@
 # Contributing to memcastle-pi
 
 Install Rust with the `wasm32-wasip2` target and Bun (`mise install`).
-Changes to Pi's JSONL reader and cursor live in `modules/pi/src/lib.rs`; changes to the live Pi extension live in
-`modules/pi/src/*.ts`.
+Changes to Pi's JSONL reader and cursor live in `sources/pi/src/lib.rs`; changes to the live Pi extension live in
+`integrations/pi/src/*.ts`.
 Keep the source and integration IDs `pi`, and preserve source option identity (`dir` is part of the scoped cursor;
 `since` only narrows a run).
 Do not change the source contract, filesystem grants or Core version range without reviewing their compatibility.
@@ -11,12 +11,12 @@ Run these checks with `MEMCASTLE_BIN` pointing to a plugin-capable Core binary (
 locally built Core):
 
 ```sh
-cargo test --manifest-path modules/pi/Cargo.toml --locked
-# Build the source component for wasm32-wasip2 and copy it to modules/pi/source.wasm first.
-(cd modules/pi && bun install --frozen-lockfile && bun run build && bun test --timeout 60000)
+cargo test --manifest-path sources/pi/Cargo.toml --locked
+# Build the source component for wasm32-wasip2 and copy it to sources/pi/source.wasm first.
+(cd integrations/pi && bun install --frozen-lockfile && bun run build && bun test --timeout 60000)
 mise run package
 "$MEMCASTLE_BIN" plugin test dist/pi-0.1.0.tar.gz
-"$MEMCASTLE_BIN" source test modules/pi --no-build
+"$MEMCASTLE_BIN" source test sources/pi --no-build
 node scripts/smoke_adoption.mjs
 ```
 

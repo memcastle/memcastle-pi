@@ -6,8 +6,8 @@ import { ROOT, cli, isolated, mine } from "./smoke_common.mjs"
 
 await isolated("memcastle-pi-adopt-", null, async ({ root, env, request }) => {
   const plugin = readFileSync(join(ROOT, "dist/pi-0.1.0.tar.gz"))
-  cli(["source", "package", join(ROOT, "modules/pi"), "--no-build"], env)
-  const legacy = readFileSync(join(ROOT, "modules/pi/dist/pi-0.1.0.tar.gz"))
+  cli(["source", "package", join(ROOT, "sources/pi"), "--no-build"], env)
+  const legacy = readFileSync(join(ROOT, "sources/pi/dist/pi-0.1.0.tar.gz"))
   let digest
   try { await request("/api/source-packages", { method: "POST", data: legacy }) }
   catch (error) {
@@ -24,7 +24,7 @@ await isolated("memcastle-pi-adopt-", null, async ({ root, env, request }) => {
   mkdirSync(session, { recursive: true })
   const name = "2026-07-14T14-27-12-546Z_019f6106.jsonl"
   const destination = join(session, name)
-  copyFileSync(join(ROOT, "modules/pi/fixtures/pi-sessions/tree/--home-me-project--", name), destination)
+  copyFileSync(join(ROOT, "sources/pi/fixtures/pi-sessions/tree/--home-me-project--", name), destination)
   utimesSync(destination, 1000, 1000)
   await request("/api/miners/pi", { method: "PUT", json: { source: "pi", locator: sessions } })
   const run = async () => {

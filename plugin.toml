@@ -13,12 +13,12 @@ license = "MIT"
 [[modules]]
 id = "pi"
 type = "source"
-manifest = "modules/pi/memcastle-source.toml"
-entry = "modules/pi/source.wasm"
+manifest = "sources/pi/memcastle-source.toml"
+entry = "sources/pi/source.wasm"
 contract = "0.4.0"
 
 [[modules]]
 id = "pi"
 type = "integration"
-manifest = "modules/pi/memcastle-integration.toml"
-entry = "modules/pi/dist/extension.js"
+manifest = "integrations/pi/memcastle-integration.toml"
+entry = "integrations/pi/dist/extension.js"

@@ -27,7 +27,7 @@ See [Pi integration](https://memcastle.github.io/integrations-pi/) for what it c
 To work on the extension itself, run it from the sources instead:
 
 ```sh
-pi -e /path/to/memcastle-pi/modules/pi/src/extension.ts             # try it for one run
+pi -e /path/to/memcastle-pi/integrations/pi/src/extension.ts        # try it for one run
 mise run package && memcastle plugin install dist/pi-0.1.0.tar.gz --consent pi=SHA256_FROM_PREVIEW
 memcastle integration update pi    # install this checkout's freshly built extension
 ```
@@ -156,10 +156,10 @@ It works whatever `MEMCASTLE_WAKE_UP` says, because asking for it is the opt-in.
 
 ### Search before answering
 
-Every turn, the extension adds the [`search-before-answer`](../modules/pi/skills/search-before-answer/SKILL.md) skill to
+Every turn, the extension adds the [`search-before-answer`](../integrations/pi/skills/search-before-answer/SKILL.md) skill to
 the system prompt, so the model searches MemCastle before it answers a question about past work, decisions, people or
 preferences, and quotes what it finds verbatim.
-The text is read from `modules/pi/skills/` in this repository and ships with the plugin.
+The text is read from `integrations/pi/skills/` in this repository and ships with the plugin.
 The same directory is offered to Pi's own skill discovery, so all five skills are listed with a `/skill:<name>` command;
 `memcastle-integration.toml` names them, and `memcastle integration install pi` puts them beside the extension.
 
@@ -190,7 +190,7 @@ keeping, and submits the answer to MemCastle as a checkpoint.
 The settings are named after `pi-palace`'s `piPalace.interval`, `piPalace.mode` and `piPalace.model`.
 
 Classification happens here and never in MemCastle: the daemon stores what it is handed and decides nothing.
-The reviewing model is given the [`checkpoint-instructions`](../modules/pi/skills/checkpoint-instructions/SKILL.md) skill,
+The reviewing model is given the [`checkpoint-instructions`](../integrations/pi/skills/checkpoint-instructions/SKILL.md) skill,
 read from this plugin's `skills/`, and replies with a payload of items, each tagged `preference`, `project`, `diary`
 or `general`.
 The extension validates that reply, stamps each item with `source.agent` (the `agentIdentity`, default `pi`), and
@@ -268,7 +268,7 @@ and the extension needs to hold the session id that carries the memory mode.
 
 ## Layout
 
-Within `modules/pi/`, the file names follow `pi-palace`'s map of the pieces, wired to MemCastle instead of MemPalace.
+Within `integrations/pi/`, the file names follow `pi-palace`'s map of the pieces, wired to MemCastle instead of MemPalace.
 
 ```text
 src/extension.ts              the entry point: handlers only; opens nothing until `session_start`
@@ -322,7 +322,7 @@ The contract is [Core's integration contract](https://memcastle.github.io/integr
 | `checkpoint` | Implemented: an interval review by Pi's own model and `/memcastle-checkpoint`, both submitting a classified payload and reporting a failed job with how to retry it | #23, done |
 | `emergency-checkpoint` | Implemented: the same review submitted with `emergency: true` at `session_before_compact`, whatever the interval setting says, bounded by a 30 second deadline, never cancelling the compaction; a `read-only` or `off` session does nothing | #24, done |
 | `persistent-session` | Implemented: one connection per Pi session, kept alive, replaced with its mode re-selected when the daemon forgets it | #29, done |
-| `skills` | Implemented: the skills the manifest names are offered to Pi's own skill listing, `search-before-answer` is injected and `checkpoint-instructions` instructs the reviewing model, all carried in `modules/pi/skills/`; `off` sessions get nothing | #25, #23, #213, done |
+| `skills` | Implemented: the skills the manifest names are offered to Pi's own skill listing, `search-before-answer` is injected and `checkpoint-instructions` instructs the reviewing model, all carried in `integrations/pi/skills/`; `off` sessions get nothing | #25, #23, #213, done |
 | `project-context` | Implemented: `.config/memcastle.toml` and `MEMCASTLE_WING` / `MEMCASTLE_ROOM` resolved from Pi's directory, used for the wake-up wing, checkpoint defaults and the search instruction | #183, done |
 | `background-mining` | By the daemon: a `schedule` trigger (`memcastle trigger set`) the user enables asks for the `pi` source on a timetable, so the extension keeps no timer of its own | #26, superseded by #189 |
 | `failure-reporting` | Implemented: the five classes plus `unexpected`, each shown as a Pi notification at the severity the shared fixture promises, with `help` | #30, done |
