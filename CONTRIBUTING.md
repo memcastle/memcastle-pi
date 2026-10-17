@@ -17,8 +17,7 @@ cargo test --manifest-path modules/pi/Cargo.toml --locked
 mise run package
 "$MEMCASTLE_BIN" plugin test dist/pi-0.1.0.tar.gz
 "$MEMCASTLE_BIN" source test modules/pi --no-build
-python3 scripts/smoke_install.py
-python3 scripts/smoke_adoption.py
+node scripts/smoke_adoption.mjs
 ```
 
 The archive is `dist/pi-<manifest.toml version>.tar.gz`; Core regenerates reviewed module and artifact checksums in

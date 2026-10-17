@@ -51,4 +51,5 @@ It follows Pi's session format version 3 and skips a line or an entry it does no
 
 `modules/pi/fixtures/pi-sessions/` is the conformance case `memcastle source test` runs: three sessions in two working directories
 and the usual noise.
-`scripts/smoke_install.py` installs the plugin into a disposable palace and mines a fixture through the real daemon.
+`memcastle plugin test dist/pi-0.1.0.tar.gz` installs the archive in a disposable palace;
+`node scripts/smoke_adoption.mjs` mines a fixture and checks the legacy cursor handoff through a real daemon.

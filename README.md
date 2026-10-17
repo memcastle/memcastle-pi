@@ -14,8 +14,7 @@ memcastle plugin inspect plugin.toml --json
 # Build modules/pi for wasm32-wasip2 and run bun run build in modules/pi first.
 memcastle plugin package plugin.toml
 memcastle plugin test dist/pi-0.1.0.tar.gz
-MEMCASTLE_BIN=/path/to/memcastle python3 scripts/smoke_install.py
-MEMCASTLE_BIN=/path/to/memcastle python3 scripts/smoke_adoption.py
+MEMCASTLE_BIN=/path/to/memcastle node scripts/smoke_adoption.mjs
 ```
 
 The archive in `dist/` is independently releasable from MemCastle Core.
