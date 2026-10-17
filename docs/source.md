@@ -1,18 +1,18 @@
 # Pi history source
 
 The conversation history of the [Pi](https://github.com/badlogic/pi-mono) coding agent, as a MemCastle mining source:
-a WebAssembly component built from `modules/pi/src/lib.rs`, one document per session file.
+a WebAssembly component built from `sources/pi/src/lib.rs`, one document per session file.
 
 It is acquisition only.
 MemCastle owns normalisation into drawers, chunking, deduplication, provenance, the cursor, idempotency and the durable
-job, and the live Pi integration (also in `modules/pi/`) is separate: it talks to the daemon over MCP and only decides when
+job, and the live Pi integration (in `integrations/pi/`) is separate: it talks to the daemon over MCP and only decides when
 to ask for mining.
 
 ## Use it
 
 ```sh
-memcastle source test modules/pi                  # build, then run fixtures/ in the source sandbox
-mise run package                                 # dist/pi-0.1.0.tar.gz, including the integration
+memcastle source test sources/pi                   # build, then run fixtures/ in the source sandbox
+memcastle plugin package plugin.toml               # dist/pi-0.1.0.tar.gz, including the integration
 memcastle plugin install dist/pi-0.1.0.tar.gz --consent pi=SHA256_FROM_PREVIEW
 memcastle source enable pi
 memcastle mine pi                                 # ~/.pi/agent/sessions
@@ -49,7 +49,7 @@ It follows Pi's session format version 3 and skips a line or an entry it does no
 
 ## Tests
 
-`modules/pi/fixtures/pi-sessions/` is the conformance case `memcastle source test` runs: three sessions in two working directories
+`sources/pi/fixtures/pi-sessions/` is the conformance case `memcastle source test` runs: three sessions in two working directories
 and the usual noise.
 `memcastle plugin test dist/pi-0.1.0.tar.gz` installs the archive in a disposable palace;
 `node scripts/smoke_adoption.mjs` mines a fixture and checks the legacy cursor handoff through a real daemon.
