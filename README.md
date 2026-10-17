@@ -7,6 +7,8 @@ The `pi` source reads Pi's JSONL session history; the `pi` integration provides 
 They intentionally share an ID but remain separately activated, configured and versioned.
 See [source behavior](docs/source.md) and [integration behavior and configuration](docs/integration.md).
 Installing the plugin makes its modules available; enable sources and install integrations separately.
+Sources live in `sources/<id>/` and integrations in `integrations/<id>/`; typed modules may share an ID without
+sharing their implementation files or activation state.
 
 ```sh
 mise install
