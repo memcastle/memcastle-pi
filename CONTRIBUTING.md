@@ -14,22 +14,21 @@ locally built Core):
 cargo test --manifest-path sources/pi/Cargo.toml --locked
 # Build the source component for wasm32-wasip2 and copy it to sources/pi/source.wasm first.
 (cd integrations/pi && bun install --frozen-lockfile && bun run build && bun test --timeout 60000)
-mise run package
-"$MEMCASTLE_BIN" plugin test dist/pi-0.1.0.tar.gz
+archive="$("$MEMCASTLE_BIN" plugin package --json | jq -r .archive)"
+"$MEMCASTLE_BIN" plugin test "$archive"
 "$MEMCASTLE_BIN" source test sources/pi --no-build
-node scripts/smoke_adoption.mjs
+ARCHIVE="$archive" node scripts/smoke_adoption.mjs
 ```
 
-The archive is `dist/pi-<manifest.toml version>.tar.gz`; Core regenerates reviewed module and artifact checksums in
-`manifest.toml` while keeping `plugin.toml` as an immutable descriptor.
-Commit `manifest.toml`, the source's `Cargo.lock`, the Bun lockfile and the change together.
-Pi's own packaging job checks those hashes, locks, format, lint, native and integration tests;
+The archive in `dist/` has an SCM-derived version; Core generates `manifest.toml` with module and artifact hashes
+inside the archive while keeping `plugin.toml` immutable. Commit the source's `Cargo.lock`, the Bun lockfile and the
+change together. Pi's CI runs format, lint, native and integration tests before packaging;
 Core's shared validation checks source conformance, installation and activation on every selected Core version.
 CI runs once per pull request and on every push to `main`, including merges.
-The matrix always tests `main` and records its exact SHA; add only plugin-capable stable versions to `core-versions`.
+The matrix tests `main` and records its exact SHA; add only plugin-capable stable release trees to `core_versions`.
 Pi's adoption smoke also runs on every leg.
 
-git-cliff computes the next `manifest.toml` version and gh-ship opens a reviewed `release/next` PR.
+git-cliff computes the next tag version and gh-ship opens a reviewed `release/next` PR.
 Merging that PR publishes the validated `pi/v<version>` archive and `.sha256sum`.
 Add an entry to Core's `plugins.json` only when the archive has actually been published; for a direct GitHub repository,
 Core can discover the plugin's versioned release without a static entry.

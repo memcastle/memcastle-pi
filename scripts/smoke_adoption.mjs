@@ -2,10 +2,10 @@
 import assert from "node:assert/strict"
 import { copyFileSync, mkdirSync, readFileSync, utimesSync } from "node:fs"
 import { join } from "node:path"
-import { ROOT, cli, isolated, mine } from "./smoke_common.mjs"
+import { ROOT, cli, isolated, mine, pluginArchive } from "./smoke_common.mjs"
 
 await isolated("memcastle-pi-adopt-", null, async ({ root, env, request }) => {
-  const plugin = readFileSync(join(ROOT, "dist/pi-0.1.0.tar.gz"))
+  const plugin = readFileSync(pluginArchive())
   cli(["source", "package", join(ROOT, "sources/pi"), "--no-build"], env)
   const legacy = readFileSync(join(ROOT, "sources/pi/dist/pi-0.1.0.tar.gz"))
   let digest
