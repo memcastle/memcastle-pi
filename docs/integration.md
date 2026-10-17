@@ -19,7 +19,7 @@ Loading only registers handlers; the connection is opened in the background when
 so Pi starts normally when the daemon is down and the user is told once how to start it.
 
 ```sh
-memcastle plugin install /path/to/pi-0.1.0.tar.gz --consent pi=SHA256_FROM_PREVIEW
+memcastle plugin install /path/to/pi-VERSION.tar.gz --consent pi=SHA256_FROM_PREVIEW
 memcastle integration install pi    # copies the extension and its skills, and registers it with Pi
 ```
 
@@ -28,7 +28,8 @@ To work on the extension itself, run it from the sources instead:
 
 ```sh
 pi -e /path/to/memcastle-pi/integrations/pi/src/extension.ts        # try it for one run
-mise run package && memcastle plugin install dist/pi-0.1.0.tar.gz --consent pi=SHA256_FROM_PREVIEW
+archive="$(memcastle plugin package --json | jq -r .archive)"
+memcastle plugin install "$archive" --consent pi=SHA256_FROM_PREVIEW
 memcastle integration update pi    # install this checkout's freshly built extension
 ```
 

@@ -12,16 +12,16 @@ sharing their implementation files or activation state.
 
 ```sh
 mise install
-memcastle plugin inspect plugin.toml --json
+memcastle plugin inspect --json
 # Build sources/pi for wasm32-wasip2 and run bun run build in integrations/pi first.
-memcastle plugin package plugin.toml
-memcastle plugin test dist/pi-0.1.0.tar.gz
-MEMCASTLE_BIN=/path/to/memcastle node scripts/smoke_adoption.mjs
+memcastle plugin package
+memcastle plugin test dist/pi-VERSION.tar.gz
+node scripts/smoke_adoption.mjs
 ```
 
 The archive in `dist/` is independently releasable from MemCastle Core.
-The root `plugin.toml` is an immutable descriptor of typed modules; Core generates the reviewable `manifest.toml`
-with release versions and artifact checksums. Commit the regenerated manifest before release.
+The root `plugin.toml` is immutable; Core generates `manifest.toml` only inside the SCM-versioned archive, with
+release versions and artifact checksums.
 Commit each source module's generated `Cargo.lock` before publishing a release.
 The source module carries the versioned public WIT contract and its own fixtures; the agent integration uses MCP/HTTP.
 No module needs a private Core checkout or a sibling provider to build or test.
@@ -31,10 +31,10 @@ cursor and mined data survive the plugin handoff without re-reading the session.
 Provider CI builds the archive locally, then calls Core's shared artifact-validation workflow to test the packaged
 source and install/activate the plugin against its
 permanent `main` prerelease, recording the exact Core SHA in the job summary.
-`core-versions` can add exact plugin-capable stable versions to the same full validation matrix;
+`core_versions` can add plugin-capable stable release trees to the same static validation matrix;
 Core 0.4.1 is not eligible because it predates plugin installation.
 Pi's adoption smoke runs on every matrix leg, and Core CI separately checks the generated plugin contract.
-Pi's release workflow validates the reviewed `pi/v<manifest.toml version>` tag on `main`, then rebuilds and checks
+Pi's release workflow validates the reviewed `pi/vVERSION` tag on `main`, then rebuilds and checks
 the artifact before attaching it to gh-ship's draft release. gh-ship and git-cliff open a reviewed `release/next`
 PR for releasable commits. Configure `APP_CLIENT_ID` and `APP_PRIVATE_KEY` in the `release` environment for an
 installed GitHub App. Native Cargo/Bun coverage and test results upload to Codecov.
