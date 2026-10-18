@@ -38,6 +38,7 @@ Pi's release workflow validates the reviewed `pi/vVERSION` tag on `main`, then r
 the artifact before attaching it to gh-ship's draft release. gh-ship and git-cliff open a reviewed `release/next`
 PR for releasable commits. Configure `APP_CLIENT_ID` and `APP_PRIVATE_KEY` in the `release` environment for an
 installed GitHub App. Native Cargo/Bun coverage and test results upload to Codecov.
+Codecov uses fixed 83% project, 80% patch, 41% `source-pi` and 99% `integration-pi` component floors.
 The parent `memcastle-plugin.tpl` scaffold composes the Pi source in `sources/pi/` and the Pi integration in
 `integrations/pi/` from the child revisions recorded in `.config/git.tpl.toml`. Their common `pi` ID does not share
 an implementation or activation state. The Pi source and integration implementations were migrated from Core.
