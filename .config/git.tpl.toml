@@ -8,6 +8,12 @@ source = "https://github.com/memcastle/memcastle-plugin.tpl"
 
 [answers]
 codecov = true
+codecov_covered_integrations = ["pi"]
+codecov_covered_sources = ["pi"]
+codecov_integration_target = "99%"
+codecov_patch_target = "80%"
+codecov_project_target = "83%"
+codecov_source_target = "41%"
 core_versions = ["main"]
 description = "Pi coding-agent history and lifecycle integration"
 gh_ship = true
