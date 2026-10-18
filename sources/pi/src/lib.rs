@@ -690,6 +690,65 @@ export!(Pi);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_TREE: AtomicU64 = AtomicU64::new(0);
+
+    struct SessionTree(PathBuf);
+
+    impl SessionTree {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "memcastle-pi-test-{}-{}",
+                std::process::id(),
+                NEXT_TREE.fetch_add(1, Ordering::Relaxed)
+            ));
+            std::fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+
+        fn put(&self, name: &str, body: &str) -> PathBuf {
+            let path = self.0.join(name);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(&path, body).unwrap();
+            path
+        }
+
+        fn source(&self, options: Vec<(&str, &str)>) -> SourceRef {
+            Pi::identify(
+                Some(self.0.display().to_string()),
+                options
+                    .into_iter()
+                    .map(|(key, value)| (key.to_string(), value.to_string()))
+                    .collect(),
+            )
+            .unwrap()
+        }
+    }
+
+    impl Drop for SessionTree {
+        fn drop(&mut self) {
+            std::fs::remove_dir_all(&self.0).unwrap();
+        }
+    }
+
+    fn candidate(key: &str) -> Candidate {
+        Candidate {
+            handle: key.into(),
+            external_id: key.into(),
+            cursor_after: "null".into(),
+        }
+    }
+
+    fn raw(body: &str, metadata: &str) -> RawDocument {
+        RawDocument {
+            external_id: "directory/session.jsonl".into(),
+            revision: revision_of(body),
+            body: body.into(),
+            metadata: metadata.into(),
+            occurred_at: None,
+        }
+    }
 
     const SESSION: &str = include_str!(
         "../fixtures/pi-sessions/tree/--home-me-project--/2026-07-14T14-27-12-546Z_019f6106.jsonl"
@@ -732,5 +791,348 @@ mod tests {
         assert_eq!(normalize_dir("/work/app/../project/"), "/work/project");
         assert!(glob_match("/work/*", "/work/project"));
         assert!(!glob_match("/work/app", "/work/project"));
+    }
+
+    #[test]
+    fn identify_validates_options_and_keeps_only_directory_in_the_account() {
+        let tree = SessionTree::new();
+        let source = tree.source(vec![
+            ("since", " 2026-09 "),
+            ("dir", " /work/./app/../pi/ "),
+        ]);
+        assert_eq!(source.source, "pi");
+        assert_eq!(source.locator, tree.0.display().to_string());
+        assert_eq!(source.account.as_deref(), Some("dir=/work/pi"));
+        assert_eq!(
+            source.options,
+            [
+                ("since".into(), "2026-09".into()),
+                ("dir".into(), "/work/pi".into())
+            ]
+        );
+        assert_eq!(Pi::default_wing(source.clone()), "pi");
+        assert_eq!(Pi::default_room(), "sessions");
+        assert_eq!(tree.source(vec![("since", "2025-01")]).account, None);
+        assert_eq!(
+            tree.source(vec![("dir", "*/repo")]).account.as_deref(),
+            Some("dir=*/repo")
+        );
+
+        for options in [
+            vec![("unknown", "yes")],
+            vec![("since", "2025-02-30")],
+            vec![("dir", "relative")],
+            vec![("dir", "\n")],
+        ] {
+            assert!(matches!(
+                Pi::identify(
+                    Some(tree.0.display().to_string()),
+                    options
+                        .into_iter()
+                        .map(|(k, v)| (k.into(), v.into()))
+                        .collect()
+                ),
+                Err(SourceError::InvalidInput(_))
+            ));
+        }
+        assert!(matches!(
+            Pi::identify(Some(tree.0.join("absent").display().to_string()), vec![]),
+            Err(SourceError::InvalidInput(_))
+        ));
+    }
+
+    #[test]
+    fn default_locator_uses_home_when_its_sessions_directory_exists() {
+        let expected = std::env::var("HOME")
+            .ok()
+            .filter(|home| !home.is_empty())
+            .map(|home| PathBuf::from(home).join(".pi/agent/sessions"));
+        assert_eq!(default_root(), expected);
+        match expected {
+            Some(path) if path.is_dir() => {
+                assert_eq!(
+                    Pi::identify(None, vec![]).unwrap().locator,
+                    path.display().to_string()
+                );
+            }
+            _ => assert!(matches!(
+                Pi::identify(None, vec![]),
+                Err(SourceError::InvalidInput(_))
+            )),
+        }
+    }
+
+    #[test]
+    fn discovery_walks_only_sessions_and_pages_by_mtime_and_key() {
+        let tree = SessionTree::new();
+        let session = "{\"type\":\"session\",\"cwd\":\"/work/pi\"}\n";
+        tree.put("a.jsonl", session);
+        tree.put("project/b.jsonl", session);
+        tree.put(
+            "project/c.jsonl",
+            "{\"type\":\"session\",\"cwd\":\"/work/other\"}\n",
+        );
+        tree.put("project/b.txt", session);
+        tree.put("project/deep/d.jsonl", session);
+        tree.put("other/no-header.jsonl", "invalid json\n");
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(tree.0.join("a.jsonl"), tree.0.join("link.jsonl")).unwrap();
+        let source = tree.source(vec![]);
+        let all = Pi::discover(source.clone(), "null".into(), 20).unwrap();
+        let keys: Vec<_> = all.candidates.iter().map(|c| c.handle.as_str()).collect();
+        assert_eq!(keys.len(), 4);
+        assert!(keys.contains(&"a.jsonl"));
+        assert!(keys.contains(&"project/b.jsonl"));
+        assert!(keys.contains(&"project/c.jsonl"));
+        assert!(keys.contains(&"other/no-header.jsonl"));
+        assert!(all.exhausted);
+        assert_eq!(
+            all.candidates
+                .iter()
+                .map(|c| c.external_id.as_str())
+                .collect::<Vec<_>>(),
+            keys
+        );
+
+        let mut cursor = "null".to_string();
+        let mut paged = Vec::new();
+        loop {
+            let page = Pi::discover(source.clone(), cursor.clone(), 1).unwrap();
+            if let Some(last) = page.candidates.last() {
+                cursor = last.cursor_after.clone();
+                let value: Value = serde_json::from_str(&cursor).unwrap();
+                assert_eq!(value["key"], last.handle);
+            }
+            paged.extend(page.candidates.into_iter().map(|c| c.handle));
+            if page.exhausted {
+                break;
+            }
+        }
+        assert_eq!(paged, keys);
+
+        let filtered = tree.source(vec![("dir", "/work/pi")]);
+        let matching = Pi::discover(filtered.clone(), "null".into(), 10).unwrap();
+        assert_eq!(matching.candidates.len(), 2);
+        assert!(
+            matching
+                .candidates
+                .iter()
+                .all(|c| c.handle == "a.jsonl" || c.handle == "project/b.jsonl")
+        );
+        assert!(
+            Pi::discover(tree.source(vec![("since", "9999-01")]), "null".into(), 10)
+                .unwrap()
+                .candidates
+                .is_empty()
+        );
+        assert_eq!(
+            Pi::discover(source, "null".into(), 0)
+                .unwrap()
+                .candidates
+                .len(),
+            0
+        );
+        assert!(Pi::discover(filtered, "null".into(), 0).is_ok());
+    }
+
+    #[test]
+    fn discovery_rejects_invalid_cursors_and_tolerates_missing_roots() {
+        let tree = SessionTree::new();
+        let source = tree.source(vec![]);
+        for cursor in [
+            "garbage",
+            "{}",
+            "{\"mtime_ns\":1}",
+            "{\"mtime_ns\":\"1\",\"key\":\"a\"}",
+            "{\"mtime_ns\":1,\"key\":2}",
+        ] {
+            assert!(matches!(
+                Pi::discover(source.clone(), cursor.into(), 1),
+                Err(SourceError::CursorInvalid(_))
+            ));
+        }
+        assert!(
+            Pi::discover(source.clone(), "null".into(), 1)
+                .unwrap()
+                .exhausted
+        );
+        let missing = SourceRef {
+            locator: tree.0.join("missing").display().to_string(),
+            ..source
+        };
+        assert!(
+            Pi::discover(missing, "null".into(), 1)
+                .unwrap()
+                .candidates
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn read_uses_session_header_and_content_revision_and_skips_bad_files() {
+        let tree = SessionTree::new();
+        let source = tree.source(vec![]);
+        let body = "garbage\n{\"type\":\"session\",\"id\":\"id-1\",\"cwd\":\"/work/pi\",\"version\":3,\"timestamp\":\"2026-07-14T14:27:12.546Z\"}\n";
+        let path = tree.put("project/session.jsonl", body);
+        let document = Pi::read(source.clone(), candidate("project/session.jsonl"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(document.external_id, "project/session.jsonl");
+        assert_eq!(document.body, body);
+        assert_eq!(document.revision, revision_of(body));
+        assert_eq!(
+            document.occurred_at.as_deref(),
+            Some("2026-07-14T14:27:12.546Z")
+        );
+        let metadata: Value = serde_json::from_str(&document.metadata).unwrap();
+        assert_eq!(metadata["path"], path.display().to_string());
+        assert_eq!(metadata["session_id"], "id-1");
+        assert_eq!(metadata["cwd"], "/work/pi");
+        assert_eq!(metadata["version"], 3);
+
+        std::fs::write(&path, format!("{body}more\n")).unwrap();
+        let changed = Pi::read(source.clone(), candidate("project/session.jsonl"))
+            .unwrap()
+            .unwrap();
+        assert_ne!(changed.revision, document.revision);
+        tree.put("empty.jsonl", " \n");
+        assert!(
+            Pi::read(source.clone(), candidate("empty.jsonl"))
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            Pi::read(source.clone(), candidate("absent.jsonl"))
+                .unwrap()
+                .is_none()
+        );
+        tree.put(
+            "bad.jsonl",
+            "{\"type\":\"session\",\"timestamp\":\"not-a-date\"}\n",
+        );
+        let bad = Pi::read(source.clone(), candidate("bad.jsonl"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(bad.occurred_at, None);
+        assert_eq!(
+            serde_json::from_str::<Value>(&bad.metadata).unwrap()["session_id"],
+            Value::Null
+        );
+        tree.put("invalid.jsonl", "not json\n");
+        assert_eq!(
+            Pi::read(source, candidate("invalid.jsonl"))
+                .unwrap()
+                .unwrap()
+                .occurred_at,
+            None
+        );
+    }
+
+    #[test]
+    fn normalize_skips_noise_and_handles_missing_headers_and_metadata() {
+        let body = concat!(
+            "not json\n",
+            "{\"type\":\"label\"}\n",
+            "{\"type\":\"message\"}\n",
+            "{\"type\":\"message\",\"message\":{\"role\":\"toolResult\",\"content\":\"secret\"}}\n",
+            "{\"type\":\"message\",\"message\":{\"role\":\"assistant\",\"content\":\"  \"}}\n",
+            "{\"type\":\"message\",\"message\":{\"role\":\"assistant\",\"content\":42}}\n",
+            "{\"type\":\"message\",\"message\":{\"role\":\"user\",\"content\":\"  Hello\\n again  \"}}\n",
+            "{\"type\":\"message\",\"message\":{\"role\":\"bashExecution\",\"command\":\"git status\\nsecond line\"}}\n",
+            "{\"type\":\"message\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"thinking\",\"text\":\"private\"},{\"type\":\"text\",\"text\":\" \"},{\"type\":\"text\",\"text\":\" Answer \"},{\"type\":\"toolCall\"}]}}\n"
+        );
+        let document = Pi::normalize(raw(body, "invalid metadata")).unwrap();
+        assert_eq!(document.title.as_deref(), Some("Hello"));
+        assert_eq!(document.room, None);
+        assert_eq!(document.name.as_deref(), Some("session"));
+        assert_eq!(document.uri, None);
+        assert_eq!(document.segments.len(), 4);
+        assert_eq!(
+            document.segments[0].text,
+            "# Pi session \nworking directory: unknown\n\n"
+        );
+        assert!(document.segments[1].text.contains("Hello\n again"));
+        assert!(document.segments[2].text.contains("[bash: git status]"));
+        assert!(
+            document.segments[3]
+                .text
+                .contains("Answer\n[tool call: tool]")
+        );
+        assert!(
+            !document
+                .segments
+                .iter()
+                .any(|s| s.text.contains("secret") || s.text.contains("private"))
+        );
+
+        let empty = Pi::normalize(raw("{\"type\":\"session\",\"id\":\"empty\"}\n", "{}")).unwrap();
+        assert!(empty.segments.is_empty());
+        assert_eq!(empty.title, None);
+        let header = Pi::normalize(raw("{\"type\":\"session\",\"id\":\"latest\",\"cwd\":\"/work/notes\"}\n{\"type\":\"message\",\"message\":{\"role\":\"assistant\",\"content\":\"Done\"}}\n", "{\"path\":\"/tmp/pi.jsonl\"}")).unwrap();
+        assert_eq!(header.room.as_deref(), Some("notes"));
+        assert_eq!(header.title, None);
+        assert_eq!(header.uri.as_deref(), Some("/tmp/pi.jsonl"));
+        assert!(header.segments[0].text.contains("Pi session latest"));
+    }
+
+    #[test]
+    fn timestamps_dates_paths_and_globs_cover_boundaries() {
+        assert_eq!(
+            parse_since("2024-02-29"),
+            parse_since("2024-02-29T00:00:00Z")
+        );
+        assert_eq!(
+            parse_since("2026-09-14T12:30:20.123456+02:30"),
+            parse_since("2026-09-14T10:00:20.123Z")
+        );
+        assert_eq!(
+            parse_since("2026-09-14T10:00:20.5-02:00"),
+            parse_since("2026-09-14T12:00:20.500Z")
+        );
+        assert_eq!(
+            parse_since("2026-09-14t10:00:20z"),
+            parse_since("2026-09-14T10:00:20Z")
+        );
+        for bad in [
+            "1900-02-29",
+            "2026-00",
+            "2026-13",
+            "2026-04-31",
+            "2026-01-00",
+            "2026-01-01-01",
+            "2026-01-01T00:00:00",
+            "2026-01-01T24:00:00Z",
+            "2026-01-01T00:60:00Z",
+            "2026-01-01T00:00:60Z",
+            "2026-01-01T00:00:00.Z",
+            "2026-01-01T00:00:00.xZ",
+            "2026-01-01T00:00:00+xx:00",
+            "2026-01-01T00:00:00+0100",
+            "2026-01-01T00:00:00Zextra",
+        ] {
+            assert!(parse_since(bad).is_err(), "{bad}");
+        }
+        assert_eq!(normalize_dir("/../../work//./app"), "/work/app");
+        assert_eq!(normalize_dir("../work/../pi"), "../pi");
+        assert_eq!(normalize_dir("/work/*/../pi"), "/work/*/../pi");
+        assert!(dir_problem("C:/work").is_none());
+        assert!(dir_problem("/work/\n").is_some());
+        assert!(glob_match("/work/**/pi", "/work/a/b/pi"));
+        assert!(glob_match("*", ""));
+        assert!(glob_match("/work/*", "/work/"));
+        assert!(!glob_match("/work/*/pi", "/work/other"));
+        assert!(glob_match("/é*", "/école"));
+        assert_eq!(first_line(&"é".repeat(90)).chars().count(), TITLE_CHARS);
+        assert_eq!(first_line("  first  \nsecond"), "first");
+        for (text, expected) in [
+            ("2026-07-14T14:27:12Z", true),
+            ("2026-07-14T14:27:12.546+02:00", true),
+            ("2026-07-14 14:27:12z", true),
+            ("2026-07-14T14:27:12.", false),
+            ("2026-07-14T14:27:12+0:00", false),
+            ("not a date", false),
+        ] {
+            assert_eq!(looks_like_rfc3339(text), expected, "{text}");
+        }
     }
 }
