@@ -2,9 +2,54 @@ coverage:
   status:
     project:
       default:
-        target: auto
+        target: "82%"
+        threshold: 0%
     patch:
       default:
-        target: auto
+        target: "80%"
+        threshold: 0%
+
+# Each flag names the same typed module as the matching CI upload.
+# A missing report is not carried forward from an earlier commit.
+flags:
+
+  source-pi:
+    paths: ["sources/pi/src/**"]
+    carryforward: false
+
+
+  integration-pi:
+    paths: ["integrations/pi/src/**"]
+    carryforward: false
+
+
+# Components describe actual file ownership, independently of upload flags.
+# Modules without native coverage stay visible without becoming failing gates.
+component_management:
+  individual_components:
+
+    - component_id: source-pi
+      name: Source pi
+      paths: ["sources/pi/src/**"]
+      statuses:
+        - type: project
+
+          target: "41%"
+          threshold: 0%
+
+
+
+    - component_id: integration-pi
+      name: Integration pi
+      paths: ["integrations/pi/src/**"]
+      statuses:
+        - type: project
+
+          target: "99%"
+          threshold: 0%
+
+
+
 comment:
-  layout: reach,diff,flags,files
+  layout: reach,diff,flags,components,files
+  require_changes: false
