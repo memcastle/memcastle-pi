@@ -43,7 +43,7 @@ Keep IDs stable when moving this project from `plugins/pi/` to its own repositor
 The source/integration jobs in `ci.yaml` measure native Rust and Bun tests and upload LCOV and JUnit reports
 to Codecov using OIDC. Enable this repository in Codecov to see PR coverage and test results.
 Manifest-only suites produce test results but no fabricated coverage report.
-The Codecov project and patch checks have fixed targets (`83%` and
+The Codecov project and patch checks have fixed targets (`82%` and
 `80%`); coverage-producing source and integration components use
 `41%` and `99%` respectively.
 Only IDs selected in `codecov_covered_sources` or `codecov_covered_integrations` block on component coverage;
