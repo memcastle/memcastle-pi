@@ -2,7 +2,7 @@ coverage:
   status:
     project:
       default:
-        target: "82%"
+        target: "91%"
         threshold: 0%
     patch:
       default:
@@ -34,7 +34,7 @@ component_management:
       statuses:
         - type: project
 
-          target: "41%"
+          target: "90%"
           threshold: 0%
 
 
