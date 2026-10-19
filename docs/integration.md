@@ -325,7 +325,7 @@ The contract is [Core's integration contract](https://memcastle.github.io/integr
 | `persistent-session` | Implemented: one connection per Pi session, kept alive, replaced with its mode re-selected when the daemon forgets it | #29, done |
 | `skills` | Implemented: the skills the manifest names are offered to Pi's own skill listing, `search-before-answer` is injected and `checkpoint-instructions` instructs the reviewing model, all carried in `integrations/pi/skills/`; `off` sessions get nothing | #25, #23, #213, done |
 | `project-context` | Implemented: `.config/memcastle.toml` and `MEMCASTLE_WING` / `MEMCASTLE_ROOM` resolved from Pi's directory, used for the wake-up wing, checkpoint defaults and the search instruction | #183, done |
-| `background-mining` | By the daemon: a `schedule` trigger (`memcastle trigger set`) the user enables asks for the `pi` source on a timetable, so the extension keeps no timer of its own | #26, superseded by #189 |
+| `background-mining` | By the daemon: an explicitly enabled miner-owned schedule (or standalone `schedule` trigger) runs a Pi history miner, so the extension keeps no timer of its own | #26, superseded by #189 |
 | `failure-reporting` | Implemented: the five classes plus `unexpected`, each shown as a Pi notification at the severity the shared fixture promises, with `help` | #30, done |
 | `audit-repair` | Implemented: `/memcastle-audit [wing]` audits, shows the dry-run plan and applies it only after one confirmation dialog, then writes a before/after diary entry; `read-only` stops at the plan | #28, done |
 
@@ -358,12 +358,16 @@ the daemon keeps the schedule when the user asks it to (below).
 
 ### Background mining
 
-Mining Pi's session history on a timetable is a daemon-side [trigger](https://memcastle.github.io/triggers/), not extension code:
-the trigger decides *when* and the `pi` source decides *how* to read.
+Mining Pi's session history on a timetable is a daemon-side [miner schedule](https://memcastle.github.io/configuration/#miners), not extension code:
+the schedule decides *when* and the `pi` source decides *how* to read.
 It is the user's to set up, and installing this extension or the `pi` source starts nothing:
 
 ```sh
 memcastle miner set pi --source pi
-memcastle trigger set pi-nightly --miner pi --type schedule --setting every=1d --setting at=03:30
-memcastle trigger enable pi-nightly
+memcastle miner set pi --schedule-every 1d --schedule-at 03:30
+memcastle miner schedule-enable pi
 ```
+
+To route different workspaces separately, define multiple miners sharing one Pi source configuration and give each
+miner its own `options.dir` and destination; see [Pi history source](source.md#one-source-configuration-multiple-workspace-miners).
+This does not change live checkpoint destinations: those follow the Pi integration's current project context.

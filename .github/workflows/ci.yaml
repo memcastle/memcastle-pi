@@ -226,4 +226,4 @@ jobs:
       artifact-name: plugin-package
       core-version: ${{ matrix.core }}
       plugin-ref: ${{ inputs.tag }}
-      extra-smoke-command: node scripts/smoke_adoption.mjs
+      extra-smoke-command: node scripts/smoke_adoption.mjs && node scripts/smoke_workspace_miners.mjs
