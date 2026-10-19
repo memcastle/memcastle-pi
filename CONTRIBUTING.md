@@ -18,6 +18,7 @@ archive="$("$MEMCASTLE_BIN" plugin package --json | jq -r .archive)"
 "$MEMCASTLE_BIN" plugin test "$archive"
 "$MEMCASTLE_BIN" source test sources/pi --no-build
 ARCHIVE="$archive" node scripts/smoke_adoption.mjs
+ARCHIVE="$archive" node scripts/smoke_workspace_miners.mjs
 ```
 
 The archive in `dist/` has an SCM-derived version; Core generates `manifest.toml` with module and artifact hashes
@@ -26,7 +27,7 @@ change together. Pi's CI runs format, lint, native and integration tests before 
 Core's shared validation checks source conformance, installation and activation on every selected Core version.
 CI runs once per pull request and on every push to `main`, including merges.
 The matrix tests `main` and records its exact SHA; add only plugin-capable stable release trees to `core_versions`.
-Pi's adoption smoke also runs on every leg.
+Pi's adoption and multi-workspace miner smokes also run on every leg.
 
 git-cliff computes the next tag version and gh-ship opens a reviewed `release/next` PR.
 Merging that PR publishes the validated `pi/v<version>` archive and `.sha256sum`.

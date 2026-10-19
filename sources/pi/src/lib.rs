@@ -219,7 +219,8 @@ fn parse_since(value: &str) -> Result<i64, String> {
     Ok(seconds * 1000 + fraction_ms)
 }
 
-/// The working directory a session was started in, from the first line of its file, or `None` when it has none.
+/// The working directory a session was started in, from its first-line header. An absent or relative `cwd` cannot
+/// identify a workspace: never infer one from the folder Pi happened to put the session in.
 fn cwd_of(path: &Path) -> Option<String> {
     use std::io::BufRead;
     let mut line = String::new();
@@ -227,7 +228,17 @@ fn cwd_of(path: &Path) -> Option<String> {
         .read_line(&mut line)
         .ok()?;
     let header: Value = serde_json::from_str(line.trim()).ok()?;
-    header.get("cwd")?.as_str().map(str::to_string)
+    if header.get("type")?.as_str()? != "session" {
+        return None;
+    }
+    let cwd = header.get("cwd")?.as_str()?;
+    if cwd.chars().any(char::is_control) {
+        return None;
+    }
+    let drive = cwd.as_bytes().get(1) == Some(&b':')
+        && cwd.as_bytes()[0].is_ascii_alphabetic()
+        && cwd.as_bytes().get(2) == Some(&b'/');
+    (cwd.starts_with('/') || drive).then(|| normalize_dir(cwd))
 }
 
 /// A `dir` value as it is compared with what OpenCode and Pi store, which is the working directory as the program saw it:
@@ -533,11 +544,10 @@ impl Guest for Pi {
             entries.retain(|entry| entry.mtime_ns >= floor);
         }
         if let Some(dir) = option("dir") {
-            // Read last, on what is left: the first line of each remaining file is all it costs. A session with no
-            // readable header has no directory to match, so it is not taken for this one.
+            // Read last, on what is left: the first line of each remaining file is all it costs. An ambiguous or
+            // unreadable working directory does not match any workspace-scoped miner.
             entries.retain(|entry| {
-                cwd_of(&path_of(&source, &entry.key))
-                    .is_some_and(|cwd| glob_match(dir, &normalize_dir(&cwd)))
+                cwd_of(&path_of(&source, &entry.key)).is_some_and(|cwd| glob_match(dir, &cwd))
             });
         }
         entries.sort_by(|a, b| (a.mtime_ns, &a.key).cmp(&(b.mtime_ns, &b.key)));
@@ -933,6 +943,84 @@ mod tests {
             0
         );
         assert!(Pi::discover(filtered, "null".into(), 0).is_ok());
+    }
+
+    #[test]
+    fn workspace_miners_select_independently_without_guessing_missing_directories() {
+        let tree = SessionTree::new();
+        tree.put(
+            "project/one.jsonl",
+            "{\"type\":\"session\",\"cwd\":\"/work/./project/\"}\n",
+        );
+        tree.put(
+            "project/two.jsonl",
+            "{\"type\":\"session\",\"cwd\":\"/work/project\"}\n",
+        );
+        tree.put(
+            "notes/one.jsonl",
+            "{\"type\":\"session\",\"cwd\":\"/work/notes\"}\n",
+        );
+        tree.put("project/no-cwd.jsonl", "{\"type\":\"session\"}\n");
+        tree.put(
+            "project/empty-cwd.jsonl",
+            "{\"type\":\"session\",\"cwd\":\"  \"}\n",
+        );
+        tree.put(
+            "project/relative.jsonl",
+            "{\"type\":\"session\",\"cwd\":\"project\"}\n",
+        );
+        tree.put(
+            "project/control.jsonl",
+            "{\"type\":\"session\",\"cwd\":\"/work/project\\n\"}\n",
+        );
+        tree.put(
+            "project/not-a-string.jsonl",
+            "{\"type\":\"session\",\"cwd\":12}\n",
+        );
+        tree.put(
+            "project/not-header.jsonl",
+            "{\"type\":\"message\",\"cwd\":\"/work/project\"}\n",
+        );
+        tree.put("project/broken.jsonl", "not JSON\n");
+
+        let project = tree.source(vec![("dir", "/work/project")]);
+        let notes = tree.source(vec![("dir", "/work/notes")]);
+        let overlapping = tree.source(vec![("dir", "/work/*")]);
+        assert_ne!(project.account, notes.account);
+        assert_ne!(project.account, overlapping.account);
+        let first = Pi::discover(project.clone(), "null".into(), 1).unwrap();
+        assert_eq!(first.candidates.len(), 1);
+        assert!(!first.exhausted);
+        let second =
+            Pi::discover(project.clone(), first.candidates[0].cursor_after.clone(), 1).unwrap();
+        assert_eq!(second.candidates.len(), 1);
+        assert!(second.exhausted);
+        let mut project_keys: Vec<_> = first
+            .candidates
+            .into_iter()
+            .chain(second.candidates)
+            .map(|c| c.external_id)
+            .collect();
+        project_keys.sort();
+        assert_eq!(project_keys, ["project/one.jsonl", "project/two.jsonl"]);
+
+        let keys = |source| -> Vec<String> {
+            let mut keys: Vec<_> = Pi::discover(source, "null".into(), 20)
+                .unwrap()
+                .candidates
+                .into_iter()
+                .map(|c| c.external_id)
+                .collect();
+            keys.sort();
+            keys
+        };
+        assert_eq!(keys(project), project_keys);
+        assert_eq!(keys(notes), ["notes/one.jsonl"]);
+        assert_eq!(
+            keys(overlapping),
+            ["notes/one.jsonl", "project/one.jsonl", "project/two.jsonl"]
+        );
+        assert_eq!(keys(tree.source(vec![])).len(), 10);
     }
 
     #[test]
