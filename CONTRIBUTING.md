@@ -1,14 +1,15 @@
 # Contributing to memcastle-pi
 
 Install Rust with the `wasm32-wasip2` target and Bun (`mise install`).
-Changes to Pi's JSONL reader and cursor live in `sources/pi/src/lib.rs`; changes to the live Pi extension live in
-`integrations/pi/src/*.ts`.
-Keep the source and integration IDs `pi`, and preserve source option identity (`dir` is part of the scoped cursor;
-`since` only narrows a run).
-Do not change the source contract, filesystem grants or Core version range without reviewing their compatibility.
+Changes to Pi's JSONL reader and cursor live in `sources/pi/src/lib.rs`; changes to the live Pi extension
+live in `integrations/pi/src/*.ts`. Keep the source and integration IDs `pi`, and preserve source option identity:
+`dir` is part of the scoped cursor, while `since` only narrows a run. Review changes to the source contract,
+filesystem grants and Core version range for compatibility before changing them.
 
-Run these checks with `MEMCASTLE_BIN` pointing to a plugin-capable Core binary (the permanent `main` prerelease or a
-locally built Core):
+## Development checks
+
+Point `MEMCASTLE_BIN` to a plugin-capable Core binary (the `development` prerelease or a local build).
+Build the source component to `sources/pi/source.wasm` before packaging.
 
 ```sh
 cargo test --manifest-path sources/pi/Cargo.toml --locked
@@ -21,15 +22,19 @@ ARCHIVE="$archive" node scripts/smoke_adoption.mjs
 ARCHIVE="$archive" node scripts/smoke_workspace_miners.mjs
 ```
 
-The archive in `dist/` has an SCM-derived version; Core generates `manifest.toml` with module and artifact hashes
-inside the archive while keeping `plugin.toml` immutable. Commit the source's `Cargo.lock`, the Bun lockfile and the
-change together. Pi's CI runs format, lint, native and integration tests before packaging;
-Core's shared validation checks source conformance, installation and activation on every selected Core version.
-CI runs once per pull request and on every push to `main`, including merges.
-The matrix tests `main` and records its exact SHA; add only plugin-capable stable release trees to `core_versions`.
-Pi's adoption and multi-workspace miner smokes also run on every leg.
+Core generates `manifest.toml` inside the SCM-versioned archive while leaving `plugin.toml` unchanged.
+Commit the source `Cargo.lock`, Bun lockfile and implementation together; do not commit generated archives.
+Pi CI runs format, lint, native and integration tests before packaging. Core's shared validation checks source
+conformance, installation and activation on every selected Core version and records the Core source SHA.
+The adoption and multi-workspace miner smokes run on every matrix leg.
 
-git-cliff computes the next tag version and gh-ship opens a reviewed `release/next` PR.
+## Template updates and releases
+
+Template answers and child revisions are recorded in `.config/git.tpl.toml`. To update, run
+`git tpl update --defaults --json`, review `git tpl diff --json`, then apply with `git tpl merge --json`.
+Preserve Pi's module IDs, cursor behavior and provider-specific docs when resolving conflicts.
+Keep the coverage-reporting module lists aligned with native tests that produce nonempty LCOV.
+
+git-cliff computes the next tag and gh-ship opens a reviewed `release/next` PR.
 Merging that PR publishes the validated `pi/v<version>` archive and `.sha256sum`.
-Add an entry to Core's `plugins.json` only when the archive has actually been published; for a direct GitHub repository,
-Core can discover the plugin's versioned release without a static entry.
+The [README](README.md) describes installation, migration and release credentials.
