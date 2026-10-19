@@ -32,7 +32,9 @@ The adoption check separately mines a session with a legacy package, removes tha
 cursor and mined data survive the plugin handoff without re-reading the session.
 Provider CI builds the archive locally, then calls Core's shared artifact-validation workflow to test the packaged
 source and install/activate the plugin against its
-permanent `main` prerelease, recording the exact Core SHA in the job summary.
+permanent `development` prerelease, recording the exact Core SHA in the job summary.
+The Core setup action verifies its fixed Linux binary against `SHA256SUMS` and exposes `MEMCASTLE_BIN`
+for the integration tests.
 `core_versions` can add plugin-capable stable release trees to the same static validation matrix;
 Core 0.4.1 is not eligible because it predates plugin installation.
 Pi's adoption smoke runs on every matrix leg, and Core CI separately checks the generated plugin contract.
