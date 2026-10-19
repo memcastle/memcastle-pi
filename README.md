@@ -1,55 +1,73 @@
 # memcastle-pi
 
-[![CI](https://github.com/memcastle/memcastle-pi/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/memcastle/memcastle-pi/actions/workflows/ci.yaml) [![Codecov](https://codecov.io/gh/memcastle/memcastle-pi/graph/badge.svg)](https://codecov.io/gh/memcastle/memcastle-pi)
+[![CI][ci-badge]][ci-workflow] [![Codecov][codecov-badge]][codecov-project]
+
+[ci-badge]: https://github.com/memcastle/memcastle-pi/actions/workflows/ci.yaml/badge.svg?branch=main
+[ci-workflow]: https://github.com/memcastle/memcastle-pi/actions/workflows/ci.yaml
+[codecov-badge]: https://codecov.io/gh/memcastle/memcastle-pi/graph/badge.svg
+[codecov-project]: https://codecov.io/gh/memcastle/memcastle-pi
 
 Pi coding-agent history and lifecycle integration.
 
-This provider plugin owns the versioned package, while each module has its own lifecycle.
-The `pi` source reads Pi's JSONL session history; the `pi` integration provides wake-up, recall and checkpoints over MCP.
-They intentionally share an ID but remain separately activated, configured and versioned.
+The `pi` source reads Pi's JSONL session history; the `pi` agent integration provides wake-up, recall and checkpoints
+over MCP. They share an ID but remain separately activated, configured and versioned.
 See [source behavior](docs/source.md) and [integration behavior and configuration](docs/integration.md).
-Installing the plugin makes its modules available; enable sources and install integrations separately.
-Sources live in `sources/<id>/` and integrations in `integrations/<id>/`; typed modules may share an ID without
-sharing their implementation files or activation state.
+
+## Install
+
+When a release is available in the [MemCastle plugin catalogue](https://memcastle.github.io/plugins.json),
+install it by ID with a plugin-capable Core binary:
 
 ```sh
-mise install
+memcastle plugin install pi
+memcastle source enable pi
+memcastle integration install pi
+```
+
+Installation makes the modules available; source activation and agent registration are separate steps.
+Core retrieves and checks the published archive. If no release is available yet, build the project below and
+install the resulting `dist/pi-VERSION.tar.gz` archive instead.
+
+### Moving an existing installation
+
+To migrate a palace already mined by the bundled `pi` source, preview installation for the exact permission
+digest and pass `--adopt-source pi`. Remove a separately installed legacy package first, if present.
+This transfers the existing source name without clearing its miner, cursor or drawers.
+Enable the source explicitly and run `memcastle integration install pi` to register the new extension.
+No independent Pi history migration or changes to the agent's own settings are required.
+
+## Build and test locally
+
+Run `mise install` for Rust/`wasm32-wasip2` and Bun, and use a plugin-capable MemCastle Core binary.
+Build `sources/pi/source.wasm` and `integrations/pi/dist/` before packaging; the CI workflow contains the
+reproducible build steps. Commit the source `Cargo.lock` and Bun lockfile.
+
+```sh
 memcastle plugin inspect --json
-# Build sources/pi for wasm32-wasip2 and run bun run build in integrations/pi first.
 memcastle plugin package
 memcastle plugin test dist/pi-VERSION.tar.gz
 node scripts/smoke_adoption.mjs
 ```
 
-The archive in `dist/` is independently releasable from MemCastle Core.
-The root `plugin.toml` is immutable; Core generates `manifest.toml` only inside the SCM-versioned archive, with
-release versions and artifact checksums.
-Commit each source module's generated `Cargo.lock` before publishing a release.
-The source module carries the versioned public WIT contract and its own fixtures; the agent integration uses MCP/HTTP.
-No module needs a private Core checkout or a sibling provider to build or test.
-The smoke check starts an isolated daemon and uses a temporary agent configuration to verify the archive install path.
-The adoption check separately mines a session with a legacy package, removes that package, and verifies its miner,
-cursor and mined data survive the plugin handoff without re-reading the session.
-Provider CI builds the archive locally, then calls Core's shared artifact-validation workflow to test the packaged
-source and install/activate the plugin against its
-permanent `development` prerelease, recording the exact Core SHA in the job summary.
-The Core setup action verifies its fixed Linux binary against `SHA256SUMS` and exposes `MEMCASTLE_BIN`
-for the integration tests.
-`core_versions` can add plugin-capable stable release trees to the same static validation matrix;
-Core 0.4.1 is not eligible because it predates plugin installation.
-Pi's adoption smoke runs on every matrix leg, and Core CI separately checks the generated plugin contract.
-Pi's release workflow validates the reviewed `pi/vVERSION` tag on `main`, then rebuilds and checks
-the artifact before attaching it to gh-ship's draft release. gh-ship and git-cliff open a reviewed `release/next`
-PR for releasable commits. Configure `APP_CLIENT_ID` and `APP_PRIVATE_KEY` in the `release` environment for an
-installed GitHub App. Native Cargo/Bun coverage and test results upload to Codecov.
-Codecov uses fixed 82% project, 80% patch, 41% `source-pi` and 99% `integration-pi` component floors.
-The parent `memcastle-plugin.tpl` scaffold composes the Pi source in `sources/pi/` and the Pi integration in
-`integrations/pi/` from the child revisions recorded in `.config/git.tpl.toml`. Their common `pi` ID does not share
-an implementation or activation state. The Pi source and integration implementations were migrated from Core.
-Neither module requires a sibling Core checkout, and `MEMCASTLE_BIN` selects a released or local Core.
+Replace `VERSION` with the archive's version in `dist/`. Packaging leaves `plugin.toml` immutable and generates
+`manifest.toml` with versions and checksums inside the archive, alongside an external `.sha256sum`.
+The child-template revisions for `sources/pi/` and `integrations/pi/` are recorded in `.config/git.tpl.toml`;
+neither module requires a sibling Core checkout. Set `MEMCASTLE_BIN` to use a released or local Core binary.
 
-To migrate a palace already mined by the bundled `pi` source, install this archive with the preview's exact consent
-and `--adopt-source pi`; remove a separately installed legacy package first, if one is present.
-This transfers the existing source name without clearing its miner, cursor or drawers.
-Enable the source explicitly and run `memcastle integration install pi` to register the new bundled extension.
-No independent Pi history migration or changes to the agent's own settings are required.
+## CI and releases
+
+CI tests both modules and the packaged artifact against the selected Core version (`development`).
+Core's shared validation checks source fixtures, installation and activation, while Pi's adoption and
+multi-workspace miner smokes run on every matrix leg. The Core setup action verifies its binary against
+`SHA256SUMS` and reports its source SHA. Core 0.4.1 predates plugin installation and cannot join the matrix.
+
+gh-ship and git-cliff open a reviewed `release/next` PR for releasable commits. After it merges, the release
+workflow validates and publishes the `pi/vVERSION` archive. Configure `APP_CLIENT_ID` and `APP_PRIVATE_KEY` in the
+`release` environment for an installed GitHub App.
+
+Native Cargo/Bun coverage and test results upload to Codecov. The fixed floors are 82% project, 80% patch,
+41% for `source-pi` and 99% for `integration-pi`.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full project checks and [AGENTS.md](AGENTS.md) for agent guidance.

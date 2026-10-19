@@ -23,6 +23,7 @@ integrations = ["pi"]
 memcastle = ">=0.4, <0.6"
 plugin_id = "pi"
 provider = "pi"
+registry = true
 repository_name = "memcastle-pi"
 ship_token = "app"
 source_template = "https://github.com/memcastle/memcastle-source.tpl"
