@@ -9,7 +9,7 @@ description = "Wake-up, recall, checkpoint and mining lifecycle for the Pi codin
 
 [compatibility]
 # The MemCastle contract the client half speaks (docs/integration-contract.md) arrived with 0.2.
-memcastle = ">=0.4, <0.6"
+memcastle = ">=0.5, <0.6"
 # Pi 1.0 is the minimum: the extension is built on its 1.x extension API and bundles the MCP client library Pi 1.0
 # publishes (`@earendil-works/pi-mcp`); earlier versions are not supported.
 agent = ">=1.0"
