@@ -25,7 +25,7 @@ ARCHIVE="$archive" node scripts/smoke_workspace_miners.mjs
 Core generates `manifest.toml` inside the SCM-versioned archive while leaving `plugin.toml` unchanged.
 Commit the source `Cargo.lock`, Bun lockfile and implementation together; do not commit generated archives.
 Pi CI runs format, lint, native and integration tests before packaging. Core's shared validation checks source
-conformance, installation and activation on every selected Core version and records the Core source SHA.
+conformance, installation and activation against `development` and `0.5`, recording each Core source SHA.
 The adoption and multi-workspace miner smokes run on every matrix leg.
 
 ## Template updates and releases

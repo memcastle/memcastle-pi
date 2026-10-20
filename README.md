@@ -56,7 +56,7 @@ neither module requires a sibling Core checkout. Set `MEMCASTLE_BIN` to use a re
 
 ## CI and releases
 
-CI tests both modules and the packaged artifact against the selected Core version (`development`).
+CI tests both modules and the packaged artifact against Core `development` and the latest stable `0.5` patch.
 Core's shared validation checks source fixtures, installation and activation, while Pi's adoption and
 multi-workspace miner smokes run on every matrix leg. The Core setup action verifies its binary against
 `SHA256SUMS` and reports its source SHA. Core 0.4.1 predates plugin installation and cannot join the matrix.
