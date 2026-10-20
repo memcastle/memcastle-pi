@@ -1,14 +1,16 @@
-// Real Pi archive bytes must keep a mined cursor and drawers across plugin lifecycle transitions.
+// Real Pi archive bytes must keep a mined cursor and drawers across reinstall, upgrade and uninstall.
 import assert from "node:assert/strict"
+import { spawnSync } from "node:child_process"
 import { copyFileSync, mkdirSync, readFileSync, utimesSync } from "node:fs"
 import { join } from "node:path"
-import { ROOT, isolated, mine, pluginArchive } from "./smoke_common.mjs"
+import { ROOT, cli, isolated, mine, pluginArchive } from "./smoke_common.mjs"
 
-await isolated("memcastle-pi-lifecycle-", null, async ({ root, request }) => {
+await isolated("memcastle-pi-lifecycle-", null, async ({ root, env, request }) => {
   const archive = readFileSync(pluginArchive())
   const preview = await request("/api/plugins/preview", { method: "POST", data: archive })
   const consents = Object.fromEntries(preview.source_consents.map(({ source, digest }) => [source, digest]))
-  const install = () => request("/api/plugins", { method: "POST", data: archive,
+  let activeArchive = archive
+  const install = () => request("/api/plugins", { method: "POST", data: activeArchive,
     headers: { "X-MemCastle-Consents": JSON.stringify(consents) } })
   await install()
   await request("/api/source-packages/pi/enable", { method: "POST" })
@@ -40,6 +42,23 @@ await isolated("memcastle-pi-lifecycle-", null, async ({ root, request }) => {
   assert.deepEqual([(await source()).cursor, (await source()).documents], [before.cursor, before.documents])
   assert.equal((await request("/api/miners/pi-history")).source, "pi")
   assert.equal((await run()).documents, 0, "reinstall rewound the source cursor")
+
+  // Repackage the real built modules as a newer parent release; no guest implementation or permissions change.
+  const next = join(root, "next-release")
+  mkdirSync(next)
+  const unpacked = spawnSync("tar", ["-xzf", pluginArchive(), "-C", next], { encoding: "utf8" })
+  assert.equal(unpacked.status, 0, unpacked.stderr || String(unpacked.error))
+  copyFileSync(join(ROOT, "plugin.toml"), join(next, "plugin.toml"))
+  const upgradedArchive = join(root, "pi-upgrade.tar.gz")
+  cli(["plugin", "package", join(next, "plugin.toml"), "--version", "0.1.1", "--output", upgradedArchive], env)
+  activeArchive = readFileSync(upgradedArchive)
+  const upgraded = await install()
+  assert.equal(upgraded.manifest.plugin.version, "0.1.1")
+  assert.equal((await request("/api/miners/pi-history")).source, "pi")
+  assert.deepEqual([(await source()).cursor, (await source()).documents], [before.cursor, before.documents])
+  assert.equal((await drawers()).length, 1, "upgrading the plugin lost a mined drawer")
+  assert.equal((await run()).documents, 0, "upgrading the plugin rewound the source cursor")
+
   await assert.rejects(request("/api/plugins/pi", { method: "DELETE" }), { status: 409 })
   assert.equal((await request("/api/miners/pi-history")).source, "pi")
 
@@ -55,4 +74,4 @@ await isolated("memcastle-pi-lifecycle-", null, async ({ root, request }) => {
   await request("/api/miners/pi-history", { method: "PUT", json: definition })
   assert.equal((await run()).documents, 0, "reinstall after uninstall rewound the source cursor")
 })
-console.log("real Pi archive retained its miner boundary, cursor and mined drawers across reinstall and uninstall")
+console.log("real Pi archive retained its miner boundary, cursor and mined drawers across reinstall, upgrade and uninstall")
