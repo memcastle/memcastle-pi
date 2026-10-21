@@ -36,5 +36,6 @@ Preserve Pi's module IDs, cursor behavior and provider-specific docs when resolv
 Keep the coverage-reporting module lists aligned with native tests that produce nonempty LCOV.
 
 git-cliff computes the next tag and gh-ship opens a reviewed `release/next` PR.
-Merging that PR publishes the validated `pi/v<version>` archive and `.sha256sum`.
+Merging that PR publishes the validated `pi-<version>.tar.gz` archive and `.sha256sum`
+under the `<version>` tag.
 The [README](README.md) describes installation, migration and release credentials.

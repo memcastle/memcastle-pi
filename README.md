@@ -62,8 +62,8 @@ multi-workspace miner smokes run on every matrix leg. The Core setup action veri
 `SHA256SUMS` and reports its source SHA. Core 0.4.1 predates plugin installation and cannot join the matrix.
 
 gh-ship and git-cliff open a reviewed `release/next` PR for releasable commits. After it merges, the release
-workflow validates and publishes the `pi/vVERSION` archive. Configure `APP_CLIENT_ID` and `APP_PRIVATE_KEY` in the
-`release` environment for an installed GitHub App.
+workflow validates the `VERSION` tag and publishes `pi-VERSION.tar.gz`. Configure `APP_CLIENT_ID` and
+`APP_PRIVATE_KEY` in the `release` environment for an installed GitHub App.
 The publish workflow uses this credential to check the draft release and upload its validated archive.
 
 Native Cargo/Bun coverage and test results upload to Codecov. The fixed floors are 82% project, 80% patch,
