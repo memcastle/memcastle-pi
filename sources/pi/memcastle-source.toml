@@ -7,7 +7,7 @@ description = "Pi coding-agent session history (JSONL files under ~/.pi/agent/se
 
 [compatibility]
 # The contract (wit/memcastle-source.wit) this component was built against, and the MemCastle versions it runs on.
-contract = "0.4.0"
+contract = "0.5.0"
 memcastle = ">=0.5, <0.6"
 
 [capabilities]
@@ -44,8 +44,8 @@ description = "a session file is created or changed under the session directory"
 
 [build]
 # `--target-dir` pins the output where `output` says it is, whatever CARGO_TARGET_DIR the builder has set.
-command = ["cargo", "build", "--release", "--target", "wasm32-wasip2", "--target-dir", "target"]
-output = "target/wasm32-wasip2/release/memcastle_source_pi.wasm"
+command = ["cargo", "build", "--locked", "--release", "--target", "wasm32-wasip3", "--target-dir", "target"]
+output = "target/wasm32-wasip3/release/memcastle_source_pi.wasm"
 
 [test]
 # The cases this source is held to: a tree of Pi sessions, in the layout Pi writes them.
