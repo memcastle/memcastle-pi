@@ -69,6 +69,10 @@ neither module requires a sibling Core checkout. Set `MEMCASTLE_BIN` to the veri
 
 ## CI and releases
 
+Source coverage jobs set `WIT_BINDGEN_DEBUG=1` to emit generated ABI glue under the build directory,
+where cargo-llvm-cov's existing filtering excludes it instead of attributing it to provider code.
+Provider coverage gates and release component builds remain unchanged.
+
 CI tests both modules and the packaged artifact against upstream Core `development` only until a compatible release exists.
 Core's shared validation checks source fixtures, installation and activation, while Pi's adoption and
 multi-workspace miner smokes run on every matrix leg. The Core setup action verifies its binary against
