@@ -19,7 +19,7 @@ memcastle mine pi                                 # ~/.pi/agent/sessions
 memcastle mine pi /backups/pi/sessions             # or: memcastle mine pi since=2026-09 dir=/work/app
 ```
 
-The build needs the `wasm32-wasip2` target (`rustup target add wasm32-wasip2`).
+The build needs Rust 1.100+ and the `wasm32-wasip3` target (`rustup target add wasm32-wasip3`).
 [Mining sources](https://memcastle.github.io/mining-sources/#pi) describes what is filed and what is left out.
 
 ## One source configuration, multiple workspace miners

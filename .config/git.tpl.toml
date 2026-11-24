@@ -14,10 +14,7 @@ codecov_integration_target = "99%"
 codecov_patch_target = "80%"
 codecov_project_target = "82%"
 codecov_source_target = "41%"
-core_versions = [
-    "development",
-    "0.5",
-]
+core_versions = ["development"]
 description = "Pi coding-agent history and lifecycle integration"
 embedding_template = "https://github.com/memcastle/memcastle-embedding-provider.tpl"
 embeddings = []
@@ -38,7 +35,7 @@ sources = ["pi"]
 from = "sources"
 source = "https://github.com/memcastle/memcastle-source.tpl"
 ref = "main"
-commit = "e298a33bde43c3cbe5a9a69d4af23b5e8103b6ff"
+commit = "c417985f9bc97f467d5ff2a1d959f4130368b9c9"
 
 [[composed]]
 from = "integrations"

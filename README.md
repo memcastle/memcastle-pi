@@ -1,5 +1,17 @@
 # memcastle-pi
 
+## Modules and root tasks
+
+- Source: [pi](sources/pi/).
+- Integration: [pi](integrations/pi/).
+
+Use `mise tasks ls` for typed `source:pi:*` and `integration:pi:*` tasks:
+`build`, `test`, `lint`, and `format:check`.
+Install integration dependencies first; source builds stage `source.wasm` for packaging.
+Requires Rust 1.100+, `wasm32-wasip3`, wasm-tools 1.263.0, and upstream development Core containing `828f0f6`.
+Stable 0.5.2 predates WASI 0.3 despite sharing the development version string; the compatibility range is transitional.
+Run `python3 scripts/validate_component.py source sources/pi/source.wasm` before host conformance and archive checks.
+
 [![CI][ci-badge]][ci-workflow] [![Codecov][codecov-badge]][codecov-project]
 
 [ci-badge]: https://github.com/memcastle/memcastle-pi/actions/workflows/ci.yaml/badge.svg?branch=main
@@ -38,7 +50,8 @@ No independent Pi history migration or changes to the agent's own settings are r
 
 ## Build and test locally
 
-Run `mise install` for Rust/`wasm32-wasip2` and Bun, and use a plugin-capable MemCastle Core binary.
+Install Rust 1.100+, run `rustup target add wasm32-wasip3`, and install Bun with `mise install`.
+Use upstream development MemCastle Core containing `828f0f6` or a verified descendant.
 Build `sources/pi/source.wasm` and `integrations/pi/dist/` before packaging; the CI workflow contains the
 reproducible build steps. Commit the source `Cargo.lock` and Bun lockfile.
 
@@ -52,11 +65,11 @@ node scripts/smoke_adoption.mjs
 Replace `VERSION` with the archive's version in `dist/`. Packaging leaves `plugin.toml` immutable and generates
 `manifest.toml` with versions and checksums inside the archive, alongside an external `.sha256sum`.
 The child-template revisions for `sources/pi/` and `integrations/pi/` are recorded in `.config/git.tpl.toml`;
-neither module requires a sibling Core checkout. Set `MEMCASTLE_BIN` to use a released or local Core binary.
+neither module requires a sibling Core checkout. Set `MEMCASTLE_BIN` to the verified upstream development binary.
 
 ## CI and releases
 
-CI tests both modules and the packaged artifact against Core `development` and the latest stable `0.5` patch.
+CI tests both modules and the packaged artifact against upstream Core `development` only until a compatible release exists.
 Core's shared validation checks source fixtures, installation and activation, while Pi's adoption and
 multi-workspace miner smokes run on every matrix leg. The Core setup action verifies its binary against
 `SHA256SUMS` and reports its source SHA. Core 0.4.1 predates plugin installation and cannot join the matrix.

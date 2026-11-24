@@ -1,12 +1,13 @@
 # The Pi history source: the conversation history of the Pi coding agent, as a WebAssembly component.
 #
 # The empty `[workspace]` keeps this source independent of Core's Cargo build; the plugin packager builds it for
-# `wasm32-wasip2` and Core's `source test` runs its fixtures through the installed host contract.
+# `wasm32-wasip3` and Core's `source test` runs its fixtures through the installed host contract.
 
 [package]
 name = "memcastle-source-pi"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.100"
 publish = false
 
 [lib]
@@ -14,7 +15,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 # Generates the guest side of `wit/memcastle-source.wit`.
-wit-bindgen = "0.57"
+wit-bindgen = "0.63.0"
 serde_json = "1"
 
 [profile.release]
